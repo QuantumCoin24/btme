@@ -7,6 +7,7 @@ import { MembershipProvider } from '../src/features/membership/MembershipContext
 import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
 import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
 import { FeedbackProvider } from '../src/features/feedback/FeedbackContext';
+import { RelationshipProvider } from '../src/features/relationship/RelationshipContext';
 import { colors } from '../src/theme/tokens';
 
 export default function RootLayout() {
@@ -18,7 +19,8 @@ export default function RootLayout() {
             <DiscoveryProvider>
               <SafeDateProvider>
                 <FeedbackProvider>
-                  <StatusBar style="light" />
+                  <RelationshipProvider>
+                    <StatusBar style="light" />
                   <Stack
                     screenOptions={{
                       headerShown: false,
@@ -27,7 +29,8 @@ export default function RootLayout() {
                         backgroundColor: colors.background,
                       },
                     }}
-                  />
+                    />
+                  </RelationshipProvider>
                 </FeedbackProvider>
               </SafeDateProvider>
             </DiscoveryProvider>

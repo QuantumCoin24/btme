@@ -491,6 +491,34 @@ export default function FeedbackScreen() {
           </Text>
         </Pressable>
 
+        {savedReflection?.seeAgain === 'yes' && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Explore Relationship Mode with ${connection.profile.firstName}`}
+            onPress={() =>
+              router.push(
+                `/relationship/${connection.id}` as never,
+              )
+            }
+            style={({ pressed }) => [
+              styles.relationshipButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Text style={styles.relationshipButtonEyebrow}>
+              WHAT NEXT?
+            </Text>
+
+            <Text style={styles.relationshipButtonTitle}>
+              Maybe you found better.
+            </Text>
+
+            <Text style={styles.relationshipButtonBody}>
+              Explore Relationship Mode on your side.
+            </Text>
+          </Pressable>
+        )}
+
         {savedReflection && (
           <View style={styles.savedCard}>
             <View style={styles.savedDot} />
@@ -868,6 +896,38 @@ const styles = StyleSheet.create({
 
   buttonPressed: {
     opacity: 0.78,
+  },
+
+  relationshipButton: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
+    padding: spacing.lg,
+  },
+
+  relationshipButtonEyebrow: {
+    color: colors.accent,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '800',
+    letterSpacing: 1.7,
+  },
+
+  relationshipButtonTitle: {
+    marginTop: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 21,
+    lineHeight: 27,
+    fontWeight: '800',
+  },
+
+  relationshipButtonBody: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
   },
 
   savedCard: {

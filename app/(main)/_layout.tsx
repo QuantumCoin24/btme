@@ -124,6 +124,11 @@ export default function MainLayout() {
         options={{ href: null }}
       />
       <Tabs.Screen
+        name="relationship/[connectionId]"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
         name="you"
         options={{
           title: 'You',
