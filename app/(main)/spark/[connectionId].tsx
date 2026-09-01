@@ -43,6 +43,7 @@ export default function SparkScreen() {
     getConnection,
     getSparkMessages,
     addSparkMessage,
+    createDatePlan,
   } = useDiscovery();
 
   const connection = useMemo(
@@ -62,6 +63,31 @@ export default function SparkScreen() {
     setDraft,
   ] = useState('');
 
+  const [
+    planningDate,
+    setPlanningDate,
+  ] = useState(false);
+
+  const [
+    dateDay,
+    setDateDay,
+  ] = useState('');
+
+  const [
+    dateTime,
+    setDateTime,
+  ] = useState('');
+
+  const [
+    datePlace,
+    setDatePlace,
+  ] = useState('');
+
+  const [
+    datePlanSaved,
+    setDatePlanSaved,
+  ] = useState(false);
+
   const canAdd =
     draft.trim().length > 0 &&
     Boolean(connection);
@@ -77,6 +103,31 @@ export default function SparkScreen() {
     );
 
     setDraft('');
+  }
+
+  const canSaveDate =
+    Boolean(connection) &&
+    dateDay.trim().length > 0 &&
+    dateTime.trim().length > 0 &&
+    datePlace.trim().length > 0;
+
+  function handleSaveDate() {
+    if (!canSaveDate) {
+      return;
+    }
+
+    createDatePlan(
+      resolvedConnectionId,
+      dateDay,
+      dateTime,
+      datePlace,
+    );
+
+    setDateDay('');
+    setDateTime('');
+    setDatePlace('');
+    setPlanningDate(false);
+    setDatePlanSaved(true);
   }
 
   if (!connection) {
@@ -235,6 +286,130 @@ export default function SparkScreen() {
           </View>
         )}
       </ScrollView>
+
+        <View style={styles.datePlanningWrap}>
+          {!planningDate ? (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Plan a local date with ${connection.profile.firstName}`}
+                onPress={() => {
+                  setPlanningDate(true);
+                  setDatePlanSaved(false);
+                }}
+                style={({ pressed }) => [
+                  styles.planDateButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.planDateEyebrow}>
+                  DATE BETTER
+                </Text>
+
+                <Text style={styles.planDateTitle}>
+                  Plan a date
+                </Text>
+
+                <Text style={styles.planDateArrow}>
+                  →
+                </Text>
+              </Pressable>
+
+              {datePlanSaved && (
+                <Text style={styles.dateSaved}>
+                  Date plan saved locally · nothing was sent
+                </Text>
+              )}
+            </>
+          ) : (
+            <View style={styles.datePlanner}>
+              <View style={styles.datePlannerHeader}>
+                <View>
+                  <Text style={styles.datePlannerEyebrow}>
+                    DATE BETTER
+                  </Text>
+
+                  <Text style={styles.datePlannerTitle}>
+                    Make a plan.
+                  </Text>
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close date planner"
+                  onPress={() =>
+                    setPlanningDate(false)
+                  }
+                  style={({ pressed }) => [
+                    styles.closePlanner,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Text style={styles.closePlannerText}>
+                    ×
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.datePlannerBody}>
+                Keep it simple. Add the day, time and place you have in mind.
+              </Text>
+
+              <TextInput
+                accessibilityLabel="Date day"
+                value={dateDay}
+                onChangeText={setDateDay}
+                placeholder="Day · e.g. Friday 4 September"
+                placeholderTextColor={colors.textMuted}
+                maxLength={60}
+                style={styles.dateInput}
+              />
+
+              <TextInput
+                accessibilityLabel="Date time"
+                value={dateTime}
+                onChangeText={setDateTime}
+                placeholder="Time · e.g. 7:30 PM"
+                placeholderTextColor={colors.textMuted}
+                maxLength={40}
+                style={styles.dateInput}
+              />
+
+              <TextInput
+                accessibilityLabel="Date place"
+                value={datePlace}
+                onChangeText={setDatePlace}
+                placeholder="Place · e.g. Drinks in Manchester"
+                placeholderTextColor={colors.textMuted}
+                maxLength={120}
+                style={styles.dateInput}
+              />
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Save local date plan"
+                disabled={!canSaveDate}
+                onPress={handleSaveDate}
+                style={({ pressed }) => [
+                  styles.saveDateButton,
+                  !canSaveDate &&
+                    styles.saveDateButtonDisabled,
+                  pressed &&
+                    canSaveDate &&
+                    styles.pressed,
+                ]}
+              >
+                <Text style={styles.saveDateButtonText}>
+                  Save date plan
+                </Text>
+              </Pressable>
+
+              <Text style={styles.datePlannerDisclosure}>
+                LOCAL PREVIEW ONLY · NOT SENT OR ACCEPTED
+              </Text>
+            </View>
+          )}
+        </View>
 
       <View style={styles.composerWrap}>
         <View style={styles.composer}>
@@ -466,6 +641,155 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
+  datePlanningWrap: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.background,
+  },
+
+  planDateButton: {
+    minHeight: 70,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  planDateEyebrow: {
+    color: colors.accent,
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+
+  planDateTitle: {
+    flex: 1,
+    marginLeft: spacing.md,
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '900',
+  },
+
+  planDateArrow: {
+    color: colors.textPrimary,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '500',
+  },
+
+  dateSaved: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  datePlanner: {
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+  },
+
+  datePlannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+
+  datePlannerEyebrow: {
+    color: colors.accent,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+  },
+
+  datePlannerTitle: {
+    marginTop: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '900',
+  },
+
+  datePlannerBody: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  closePlanner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  closePlannerText: {
+    marginTop: -2,
+    color: colors.textSecondary,
+    fontSize: 24,
+    lineHeight: 26,
+    fontWeight: '400',
+  },
+
+  dateInput: {
+    minHeight: 52,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  saveDateButton: {
+    minHeight: 52,
+    marginTop: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  saveDateButtonDisabled: {
+    opacity: 0.28,
+  },
+
+  saveDateButtonText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '900',
+  },
+
+  datePlannerDisclosure: {
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: 8,
+    lineHeight: 12,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textAlign: 'center',
+  },
+
   composerWrap: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,

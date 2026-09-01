@@ -46,11 +46,21 @@ export type SparkConversation = {
   messages: SparkMessage[];
 };
 
+export type DatePlan = {
+  id: string;
+  connectionId: string;
+  day: string;
+  time: string;
+  place: string;
+  createdAtLabel: string;
+};
+
 type DiscoveryContextValue = {
   introductions: DatingProfile[];
   currentProfile: DatingProfile | null;
   connections: Connection[];
   sparkConversations: SparkConversation[];
+  datePlans: DatePlan[];
   likeCurrentProfile: () => void;
   passCurrentProfile: () => void;
   getConnection: (connectionId: string) => Connection | null;
@@ -58,6 +68,12 @@ type DiscoveryContextValue = {
   addSparkMessage: (
     connectionId: string,
     body: string,
+  ) => void;
+  createDatePlan: (
+    connectionId: string,
+    day: string,
+    time: string,
+    place: string,
   ) => void;
 };
 
@@ -168,6 +184,11 @@ export function DiscoveryProvider({
     sparkConversations,
     setSparkConversations,
   ] = useState<SparkConversation[]>([]);
+
+  const [
+    datePlans,
+    setDatePlans,
+  ] = useState<DatePlan[]>([]);
 
   const introductions = useMemo(
     () =>
@@ -299,23 +320,60 @@ export function DiscoveryProvider({
     });
   }
 
+  function createDatePlan(
+    connectionId: string,
+    day: string,
+    time: string,
+    place: string,
+  ) {
+    const cleanDay = day.trim();
+    const cleanTime = time.trim();
+    const cleanPlace = place.trim();
+
+    if (
+      !getConnection(connectionId) ||
+      !cleanDay ||
+      !cleanTime ||
+      !cleanPlace
+    ) {
+      return;
+    }
+
+    const plan: DatePlan = {
+      id: `date-${connectionId}-${Date.now()}`,
+      connectionId,
+      day: cleanDay,
+      time: cleanTime,
+      place: cleanPlace,
+      createdAtLabel: 'Planned locally',
+    };
+
+    setDatePlans((current) => [
+      plan,
+      ...current,
+    ]);
+  }
+
   const value = useMemo(
     () => ({
       introductions,
       currentProfile,
       connections,
       sparkConversations,
+      datePlans,
       likeCurrentProfile,
       passCurrentProfile,
       getConnection,
       getSparkMessages,
       addSparkMessage,
+      createDatePlan,
     }),
     [
       introductions,
       currentProfile,
       connections,
       sparkConversations,
+      datePlans,
     ],
   );
 
