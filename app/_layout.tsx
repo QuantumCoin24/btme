@@ -6,6 +6,7 @@ import { CompatibilityProvider } from '../src/features/compatibility/Compatibili
 import { MembershipProvider } from '../src/features/membership/MembershipContext';
 import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
 import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
+import { FeedbackProvider } from '../src/features/feedback/FeedbackContext';
 import { colors } from '../src/theme/tokens';
 
 export default function RootLayout() {
@@ -16,16 +17,18 @@ export default function RootLayout() {
           <MembershipProvider>
             <DiscoveryProvider>
               <SafeDateProvider>
-                <StatusBar style="light" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    animation: 'fade',
-                    contentStyle: {
-                      backgroundColor: colors.background,
-                    },
-                  }}
-                />
+                <FeedbackProvider>
+                  <StatusBar style="light" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      animation: 'fade',
+                      contentStyle: {
+                        backgroundColor: colors.background,
+                      },
+                    }}
+                  />
+                </FeedbackProvider>
               </SafeDateProvider>
             </DiscoveryProvider>
           </MembershipProvider>

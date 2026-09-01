@@ -14,6 +14,9 @@ import {
   useDiscovery,
 } from '../../src/features/discovery/DiscoveryContext';
 import {
+  useFeedback,
+} from '../../src/features/feedback/FeedbackContext';
+import {
   colors,
   radius,
   spacing,
@@ -26,6 +29,9 @@ export default function DatesScreen() {
     datePlans,
     getConnection,
   } = useDiscovery();
+  const {
+    getReflectionForDatePlan,
+  } = useFeedback();
 
   return (
     <AppShellScreen
@@ -43,6 +49,9 @@ export default function DatesScreen() {
             if (!connection) {
               return null;
             }
+
+            const reflection =
+              getReflectionForDatePlan(plan.id);
 
             return (
               <View
@@ -105,6 +114,23 @@ export default function DatesScreen() {
                 <Text style={styles.localDisclosure}>
                   LOCAL PLAN · NOT SENT OR ACCEPTED
                 </Text>
+
+                {reflection && (
+                  <View style={styles.reflectionStatus}>
+                    <View style={styles.reflectionDot} />
+
+                    <View style={styles.reflectionCopy}>
+                      <Text style={styles.reflectionTitle}>
+                        Private reflection saved
+                      </Text>
+
+                      <Text style={styles.reflectionBody}>
+                        Local only · not shared with {' '}
+                        {connection.profile.firstName}
+                      </Text>
+                    </View>
+                  </View>
+                )}
 
                 <Pressable
                   accessibilityRole="button"
@@ -347,6 +373,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
+  },
+
+  reflectionStatus: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  reflectionDot: {
+    width: 8,
+    height: 8,
+    marginTop: 5,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+
+  reflectionCopy: {
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
+
+  reflectionTitle: {
+    color: colors.textPrimary,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '900',
+  },
+
+  reflectionBody: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontSize: 10,
+    lineHeight: 15,
   },
 
   safeDateCard: {

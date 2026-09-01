@@ -120,6 +120,10 @@ export default function MainLayout() {
       />
 
       <Tabs.Screen
+        name="feedback/[datePlanId]"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="you"
         options={{
           title: 'You',

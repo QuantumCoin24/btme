@@ -327,6 +327,31 @@ export default function SafeDateScreen() {
                 : 'This state exists only inside the current app preview. No remote safety service is active.'}
             </Text>
 
+            {isEnded && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Reflect privately on your date with ${connection.profile.firstName}`}
+                onPress={() =>
+                  router.push(
+                    `/feedback/${plan.id}` as never,
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.primaryButton,
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  Reflect on the date
+                </Text>
+              </Pressable>
+            )}
+
             {!isEnded && (
               <>
                 <Pressable
