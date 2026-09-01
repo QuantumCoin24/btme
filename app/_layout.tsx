@@ -8,6 +8,8 @@ import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
 import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
 import { FeedbackProvider } from '../src/features/feedback/FeedbackContext';
 import { RelationshipProvider } from '../src/features/relationship/RelationshipContext';
+import { SuccessProvider } from '../src/features/success/SuccessContext';
+import { MemberSafetyProvider } from '../src/features/safety/MemberSafetyContext';
 import { colors } from '../src/theme/tokens';
 
 export default function RootLayout() {
@@ -20,7 +22,9 @@ export default function RootLayout() {
               <SafeDateProvider>
                 <FeedbackProvider>
                   <RelationshipProvider>
-                    <StatusBar style="light" />
+                    <SuccessProvider>
+                      <MemberSafetyProvider>
+                        <StatusBar style="light" />
                   <Stack
                     screenOptions={{
                       headerShown: false,
@@ -29,7 +33,9 @@ export default function RootLayout() {
                         backgroundColor: colors.background,
                       },
                     }}
-                    />
+                        />
+                      </MemberSafetyProvider>
+                    </SuccessProvider>
                   </RelationshipProvider>
                 </FeedbackProvider>
               </SafeDateProvider>

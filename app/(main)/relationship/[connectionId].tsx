@@ -261,6 +261,24 @@ export default function RelationshipModeScreen() {
 
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Explore the BTME success moment"
+              onPress={() =>
+                router.push(
+                  `/success/${connection.id}` as never,
+                )
+              }
+              style={({ pressed }) => [
+                styles.successButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.successButtonText}>
+                I think I found better ❤️‍🔥
+              </Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel="End my Relationship Mode"
               onPress={() =>
                 endLocalRelationshipMode(
@@ -535,6 +553,23 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '800',
+  },
+
+  successButton: {
+    marginTop: spacing.lg,
+    minHeight: 54,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+
+  successButtonText: {
     color: colors.textPrimary,
     fontSize: 16,
     lineHeight: 21,

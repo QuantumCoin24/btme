@@ -1,8 +1,12 @@
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {
+  useRouter,
+} from 'expo-router';
 import {
   AppShellScreen,
 } from '../../src/components/AppShellScreen';
@@ -62,6 +66,8 @@ const membershipLabels = {
 } as const;
 
 export default function YouScreen() {
+  const router = useRouter();
+
   const {
     firstName,
     city,
@@ -274,6 +280,66 @@ export default function YouScreen() {
             'Your answer will appear here.'
           }
         />
+      </View>
+
+      <Text style={styles.sectionEyebrow}>
+        MANAGE
+      </Text>
+
+      <View style={styles.manageStack}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Manage profile"
+          onPress={() =>
+            router.push(
+              '/edit-profile' as never,
+            )
+          }
+          style={({ pressed }) => [
+            styles.manageCard,
+            pressed && styles.manageCardPressed,
+          ]}
+        >
+          <Text style={styles.manageEyebrow}>
+            PROFILE
+          </Text>
+
+          <Text style={styles.manageTitle}>
+            Keep it current.
+          </Text>
+
+          <Text style={styles.manageBody}>
+            Review your profile, preferences,
+            photos and personality.
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          onPress={() =>
+            router.push(
+              '/settings' as never,
+            )
+          }
+          style={({ pressed }) => [
+            styles.manageCard,
+            pressed && styles.manageCardPressed,
+          ]}
+        >
+          <Text style={styles.manageEyebrow}>
+            SETTINGS
+          </Text>
+
+          <Text style={styles.manageTitle}>
+            Your account. Your rules.
+          </Text>
+
+          <Text style={styles.manageBody}>
+            Membership, privacy, safety and account
+            controls.
+          </Text>
+        </Pressable>
       </View>
 
       <Text style={styles.sectionEyebrow}>
@@ -537,6 +603,45 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '700',
   },
+  manageStack: {
+    gap: spacing.sm,
+  },
+
+  manageCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+  },
+
+  manageCardPressed: {
+    opacity: 0.72,
+  },
+
+  manageEyebrow: {
+    color: colors.accent,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '800',
+    letterSpacing: 1.7,
+  },
+
+  manageTitle: {
+    marginTop: spacing.sm,
+    color: colors.textPrimary,
+    fontSize: 19,
+    lineHeight: 25,
+    fontWeight: '800',
+  },
+
+  manageBody: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
   membershipCard: {
     borderWidth: 1,
     borderColor: colors.border,

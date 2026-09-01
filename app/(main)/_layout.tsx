@@ -129,6 +129,26 @@ export default function MainLayout() {
       />
 
       <Tabs.Screen
+        name="success/[connectionId]"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
+        name="edit-profile"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
+        name="safety-center"
+        options={{ href: null }}
+      />
+
+      <Tabs.Screen
         name="you"
         options={{
           title: 'You',
