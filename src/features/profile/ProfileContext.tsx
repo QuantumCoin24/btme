@@ -18,7 +18,6 @@ export type MatchPreference =
   | 'everyone';
 
 type ProfileState = {
-  verificationComplete: boolean;
   heroPhotoReady: boolean;
   additionalPhotoCount: number;
   relationshipIntent: RelationshipIntent | null;
@@ -29,7 +28,6 @@ type ProfileState = {
 
 type ProfileContextValue =
   ProfileState & {
-    setVerificationComplete: (value: boolean) => void;
     setHeroPhotoReady: (value: boolean) => void;
     setAdditionalPhotoCount: (value: number) => void;
     setRelationshipIntent: (
@@ -52,11 +50,6 @@ type ProfileProviderProps = {
 export function ProfileProvider({
   children,
 }: ProfileProviderProps) {
-  const [
-    verificationComplete,
-    setVerificationComplete,
-  ] = useState(false);
-
   const [
     heroPhotoReady,
     setHeroPhotoReady,
@@ -89,14 +82,12 @@ export function ProfileProvider({
 
   const value = useMemo(
     () => ({
-      verificationComplete,
       heroPhotoReady,
       additionalPhotoCount,
       relationshipIntent,
       matchPreference,
       minimumAge,
       maximumAge,
-      setVerificationComplete,
       setHeroPhotoReady,
       setAdditionalPhotoCount,
       setRelationshipIntent,
@@ -105,7 +96,6 @@ export function ProfileProvider({
       setMaximumAge,
     }),
     [
-      verificationComplete,
       heroPhotoReady,
       additionalPhotoCount,
       relationshipIntent,

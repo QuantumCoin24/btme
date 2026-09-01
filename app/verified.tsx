@@ -44,19 +44,19 @@ export default function VerifiedScreen() {
         </View>
 
         <Text style={styles.eyebrow}>
-          CHECK COMPLETE
+          CAMERA READY
         </Text>
 
         <Text style={styles.title}>
-          Definitely you.
+          Looking good. ❤️‍🔥
         </Text>
 
         <Text style={styles.body}>
-          Welcome to verified dating.
+          Your camera check is complete.
         </Text>
 
         <Text style={styles.note}>
-          Once identity verification is connected, successful members will receive the BTME Verified badge.
+          This preview has not verified your identity. Once trusted identity and liveness verification is connected, successful members can receive the BTME Verified badge.
         </Text>
       </View>
     </OnboardingScreen>

@@ -1,3 +1,5 @@
+import { useRouter } from 'expo-router';
+
 import {
   StyleSheet,
   Text,
@@ -7,6 +9,10 @@ import {
 import {
   OnboardingScreen,
 } from '../src/components/OnboardingScreen';
+
+import {
+  PrimaryButton,
+} from '../src/components/PrimaryButton';
 
 import {
   BrandMark,
@@ -52,6 +58,7 @@ const chemistryLabels = {
 } as const;
 
 export default function ProfilePreviewScreen() {
+  const router = useRouter();
   const {
     firstName,
     city,
@@ -96,14 +103,21 @@ export default function ProfilePreviewScreen() {
   return (
     <OnboardingScreen
       footer={
-        <View style={styles.footerNote}>
-          <Text style={styles.footerTitle}>
-            Profile foundation complete. ❤️‍🔥
-          </Text>
+        <View style={styles.footerActions}>
+          <View style={styles.footerNote}>
+            <Text style={styles.footerTitle}>
+              Profile foundation complete. ❤️‍🔥
+            </Text>
 
-          <Text style={styles.footerBody}>
-            Membership comes next.
-          </Text>
+            <Text style={styles.footerBody}>
+              Now choose how you want to date better.
+            </Text>
+          </View>
+
+          <PrimaryButton
+            label="See membership →"
+            onPress={() => router.push('/membership')}
+          />
         </View>
       }
     >
@@ -314,6 +328,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+  },
+
+  footerActions: {
+    gap: spacing.md,
   },
 
   footerNote: {
