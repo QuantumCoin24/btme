@@ -5,6 +5,7 @@ import { ProfileProvider } from '../src/features/profile/ProfileContext';
 import { CompatibilityProvider } from '../src/features/compatibility/CompatibilityContext';
 import { MembershipProvider } from '../src/features/membership/MembershipContext';
 import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
+import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
 import { colors } from '../src/theme/tokens';
 
 export default function RootLayout() {
@@ -14,16 +15,18 @@ export default function RootLayout() {
         <CompatibilityProvider>
           <MembershipProvider>
             <DiscoveryProvider>
-              <StatusBar style="light" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: 'fade',
-                  contentStyle: {
-                    backgroundColor: colors.background,
-                  },
-                }}
-              />
+              <SafeDateProvider>
+                <StatusBar style="light" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    animation: 'fade',
+                    contentStyle: {
+                      backgroundColor: colors.background,
+                    },
+                  }}
+                />
+              </SafeDateProvider>
             </DiscoveryProvider>
           </MembershipProvider>
         </CompatibilityProvider>

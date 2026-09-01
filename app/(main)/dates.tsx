@@ -1,8 +1,12 @@
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {
+  useRouter,
+} from 'expo-router';
 import {
   AppShellScreen,
 } from '../../src/components/AppShellScreen';
@@ -16,6 +20,8 @@ import {
 } from '../../src/theme/tokens';
 
 export default function DatesScreen() {
+  const router = useRouter();
+
   const {
     datePlans,
     getConnection,
@@ -99,6 +105,29 @@ export default function DatesScreen() {
                 <Text style={styles.localDisclosure}>
                   LOCAL PLAN · NOT SENT OR ACCEPTED
                 </Text>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open SafeDate preview for ${connection.profile.firstName}`}
+                  onPress={() =>
+                    router.push(
+                      `/safedate/${plan.id}` as never,
+                    )
+                  }
+                  style={({ pressed }) => [
+                    styles.safeDateButton,
+                    pressed &&
+                      styles.safeDateButtonPressed,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.safeDateButtonText
+                    }
+                  >
+                    Open SafeDate™ preview
+                  </Text>
+                </Pressable>
               </View>
             );
           })}
@@ -266,6 +295,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  safeDateButton: {
+    minHeight: 50,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  safeDateButtonPressed: {
+    opacity: 0.72,
+  },
+  safeDateButtonText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '900',
+  },
   emptyCard: {
     minHeight: 250,
     marginTop: spacing.xl,
