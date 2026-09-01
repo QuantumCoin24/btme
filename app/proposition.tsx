@@ -86,7 +86,7 @@ export default function PropositionScreen() {
       <View style={styles.footer}>
         <PrimaryButton
           label="Sounds better →"
-          onPress={() => {}}
+          onPress={() => router.push('/join')}
         />
 
         <Text
