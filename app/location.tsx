@@ -5,6 +5,10 @@ import {
 } from 'react-native';
 
 import {
+  useRouter,
+} from 'expo-router';
+
+import {
   ChoicePill,
 } from '../src/components/ChoicePill';
 
@@ -42,6 +46,8 @@ const distances = [
 ] as const;
 
 export default function LocationScreen() {
+  const router = useRouter();
+
   const {
     city,
     setCity,
@@ -57,7 +63,11 @@ export default function LocationScreen() {
       footer={
         <PrimaryButton
           label="Use this location ❤️‍🔥"
-          onPress={() => {}}
+          onPress={() => {
+            if (valid) {
+              router.push('/verify');
+            }
+          }}
           style={{
             opacity: valid ? 1 : 0.45,
           }}

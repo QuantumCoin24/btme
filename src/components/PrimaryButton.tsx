@@ -1,5 +1,6 @@
 import {
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   ViewStyle,
@@ -15,21 +16,30 @@ import {
 type PrimaryButtonProps = {
   label: string;
   onPress: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  disabled?: boolean;
 };
 
 export function PrimaryButton({
   label,
   onPress,
   style,
+  disabled = false,
 }: PrimaryButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{
+        disabled,
+      }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        pressed && styles.pressed,
+        disabled && styles.disabled,
+        pressed &&
+          !disabled &&
+          styles.pressed,
         style,
       ]}
     >
@@ -42,7 +52,7 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 58,
+    minHeight: 62,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
     alignItems: 'center',
@@ -52,11 +62,21 @@ const styles = StyleSheet.create({
 
   pressed: {
     backgroundColor: colors.accentPressed,
-    transform: [{ scale: 0.985 }],
+    transform: [
+      {
+        scale: 0.985,
+      },
+    ],
+  },
+
+  disabled: {
+    opacity: 0.45,
   },
 
   label: {
     color: colors.textPrimary,
     ...typography.button,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 });

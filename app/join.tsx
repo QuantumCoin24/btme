@@ -60,9 +60,11 @@ export default function JoinScreen() {
       footer={
         <PrimaryButton
           label="Continue →"
-          onPress={() => router.push('/birthday')}
-          style={{
-            opacity: valid ? 1 : 0.45,
+          disabled={!valid}
+          onPress={() => {
+            if (valid) {
+              router.push('/birthday');
+            }
           }}
         />
       }
