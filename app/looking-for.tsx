@@ -5,6 +5,10 @@ import {
 } from 'react-native';
 
 import {
+  useRouter,
+} from 'expo-router';
+
+import {
   ChoicePill,
 } from '../src/components/ChoicePill';
 
@@ -46,6 +50,8 @@ const preferences: Array<{
 ];
 
 export default function LookingForScreen() {
+  const router = useRouter();
+
   const {
     matchPreference,
     setMatchPreference,
@@ -60,8 +66,12 @@ export default function LookingForScreen() {
       footer={
         <PrimaryButton
           label="Save preferences ❤️‍🔥"
-          onPress={() => {}}
           disabled={!matchPreference}
+          onPress={() => {
+            if (matchPreference) {
+              router.push('/lifestyle');
+            }
+          }}
         />
       }
     >
