@@ -106,6 +106,13 @@ export default function MainLayout() {
       />
 
       <Tabs.Screen
+        name="spark/[connectionId]"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
         name="you"
         options={{
           title: 'You',

@@ -34,12 +34,31 @@ export type Connection = {
   connectedAtLabel: string;
 };
 
+export type SparkMessage = {
+  id: string;
+  connectionId: string;
+  body: string;
+  createdAtLabel: string;
+};
+
+export type SparkConversation = {
+  connectionId: string;
+  messages: SparkMessage[];
+};
+
 type DiscoveryContextValue = {
   introductions: DatingProfile[];
   currentProfile: DatingProfile | null;
   connections: Connection[];
+  sparkConversations: SparkConversation[];
   likeCurrentProfile: () => void;
   passCurrentProfile: () => void;
+  getConnection: (connectionId: string) => Connection | null;
+  getSparkMessages: (connectionId: string) => SparkMessage[];
+  addSparkMessage: (
+    connectionId: string,
+    body: string,
+  ) => void;
 };
 
 const INTRODUCTIONS: DatingProfile[] = [
@@ -145,6 +164,11 @@ export function DiscoveryProvider({
     setConnections,
   ] = useState<Connection[]>([]);
 
+  const [
+    sparkConversations,
+    setSparkConversations,
+  ] = useState<SparkConversation[]>([]);
+
   const introductions = useMemo(
     () =>
       INTRODUCTIONS.filter(
@@ -200,18 +224,98 @@ export function DiscoveryProvider({
     });
   }
 
+  function getConnection(
+    connectionId: string,
+  ) {
+    return (
+      connections.find(
+        (connection) =>
+          connection.id === connectionId,
+      ) ?? null
+    );
+  }
+
+  function getSparkMessages(
+    connectionId: string,
+  ) {
+    return (
+      sparkConversations.find(
+        (conversation) =>
+          conversation.connectionId ===
+          connectionId,
+      )?.messages ?? []
+    );
+  }
+
+  function addSparkMessage(
+    connectionId: string,
+    body: string,
+  ) {
+    const trimmedBody = body.trim();
+
+    if (
+      !trimmedBody ||
+      !getConnection(connectionId)
+    ) {
+      return;
+    }
+
+    const message: SparkMessage = {
+      id: `spark-${connectionId}-${Date.now()}`,
+      connectionId,
+      body: trimmedBody,
+      createdAtLabel: 'Just now',
+    };
+
+    setSparkConversations((current) => {
+      const existing = current.find(
+        (conversation) =>
+          conversation.connectionId ===
+          connectionId,
+      );
+
+      if (!existing) {
+        return [
+          ...current,
+          {
+            connectionId,
+            messages: [message],
+          },
+        ];
+      }
+
+      return current.map((conversation) =>
+        conversation.connectionId ===
+        connectionId
+          ? {
+              ...conversation,
+              messages: [
+                ...conversation.messages,
+                message,
+              ],
+            }
+          : conversation,
+      );
+    });
+  }
+
   const value = useMemo(
     () => ({
       introductions,
       currentProfile,
       connections,
+      sparkConversations,
       likeCurrentProfile,
       passCurrentProfile,
+      getConnection,
+      getSparkMessages,
+      addSparkMessage,
     }),
     [
       introductions,
       currentProfile,
       connections,
+      sparkConversations,
     ],
   );
 

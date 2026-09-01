@@ -1,8 +1,10 @@
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   AppShellScreen,
 } from '../../src/components/AppShellScreen';
@@ -16,6 +18,8 @@ import {
 } from '../../src/theme/tokens';
 
 export default function ConnectionsScreen() {
+  const router = useRouter();
+
   const {
     connections,
   } = useDiscovery();
@@ -29,9 +33,23 @@ export default function ConnectionsScreen() {
       {connections.length > 0 ? (
         <View style={styles.list}>
           {connections.map((connection) => (
-            <View
+            <Pressable
               key={connection.id}
-              style={styles.connection}
+              accessibilityRole="button"
+              accessibilityLabel={`Open Spark with ${connection.profile.firstName}`}
+              onPress={() =>
+                router.push({
+                  pathname:
+                    '/spark/[connectionId]',
+                  params: {
+                    connectionId: connection.id,
+                  },
+                })
+              }
+              style={({ pressed }) => [
+                styles.connection,
+                pressed && styles.connectionPressed,
+              ]}
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
@@ -60,7 +78,7 @@ export default function ConnectionsScreen() {
               <Text style={styles.heart}>
                 ♥
               </Text>
-            </View>
+            </Pressable>
           ))}
 
           <View style={styles.messageNote}>
@@ -109,6 +127,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  connectionPressed: {
+    opacity: 0.72,
   },
   avatar: {
     width: 60,
