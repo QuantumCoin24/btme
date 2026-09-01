@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { colors } from '../src/theme/tokens';
+
 export default function RootLayout() {
   return (
     <>
@@ -9,8 +11,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: 'fade',
           contentStyle: {
-            backgroundColor: '#050505',
+            backgroundColor: colors.background,
           },
         }}
       />
