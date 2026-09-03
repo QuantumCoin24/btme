@@ -23,6 +23,9 @@ import {
   useProfile,
 } from '../../src/features/profile/ProfileContext';
 import {
+  useVerification,
+} from '../../src/features/verification/VerificationContext';
+import {
   colors,
   radius,
   spacing,
@@ -95,6 +98,49 @@ export default function YouScreen() {
   const {
     selectedPlan,
   } = useMembership();
+  const {
+    status: verificationStatus,
+    verified: identityVerified,
+    loading: verificationLoading,
+  } = useVerification();
+
+  const verificationPresentation =
+    verificationLoading
+      ? {
+          title: 'Checking verification.',
+          body: 'BTME™ is securely checking your identity verification status.',
+          status: 'CHECKING VERIFICATION',
+        }
+      : identityVerified
+        ? {
+            title: 'BTME Verified.',
+            body: 'Your identity verification has been confirmed by BTME™ trusted verification infrastructure.',
+            status: 'IDENTITY VERIFIED',
+          }
+        : verificationStatus === 'pending'
+          ? {
+              title: 'Verification in progress.',
+              body: 'Your identity verification has been submitted and is awaiting a trusted result.',
+              status: 'VERIFICATION PENDING',
+            }
+          : verificationStatus === 'needs_review'
+            ? {
+                title: 'Verification needs review.',
+                body: 'Your verification requires additional trusted review before BTME Verified status can be awarded.',
+                status: 'REVIEW REQUIRED',
+              }
+            : verificationStatus === 'failed'
+              ? {
+                  title: 'Verification not completed.',
+                  body: 'Your latest verification attempt was not successful. BTME Verified status has not been awarded.',
+                  status: 'NOT VERIFIED',
+                }
+              : {
+                  title: 'Verification not started.',
+                  body: 'Your profile is active, but your identity has not yet been verified by BTME™ trusted verification infrastructure.',
+                  status: 'NOT VERIFIED',
+                };
+
 
   const photoCount =
     (heroPhotoReady ? 1 : 0) +
@@ -380,22 +426,15 @@ export default function YouScreen() {
         </Text>
 
         <Text style={styles.trustTitle}>
-          Built for trust, not theatre.
+          {verificationPresentation.title}
         </Text>
-
         <Text style={styles.trustBody}>
-          Your current profile state does not mean
-          your identity has been verified. Production
-          verification, membership entitlement and
-          SafeDate™ services require their own trusted
-          systems.
+          {verificationPresentation.body}
         </Text>
-
         <View style={styles.trustStatus}>
           <View style={styles.trustDot} />
-
           <Text style={styles.trustStatusText}>
-            PRODUCTION TRUST SYSTEMS NOT ACTIVE
+            {verificationPresentation.status}
           </Text>
         </View>
       </View>

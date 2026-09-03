@@ -61,7 +61,10 @@ export default function EditProfileScreen() {
           body="Update the name used across your profile."
           action="Edit name"
           onPress={() =>
-            router.push('/name' as never)
+            router.push({
+              pathname: '/edit-member',
+              params: { section: 'name' },
+            } as never)
           }
         />
 
@@ -71,7 +74,10 @@ export default function EditProfileScreen() {
           body="Review your location and discovery radius."
           action="Edit location"
           onPress={() =>
-            router.push('/location' as never)
+            router.push({
+              pathname: '/edit-member',
+              params: { section: 'location' },
+            } as never)
           }
         />
 
@@ -96,7 +102,10 @@ export default function EditProfileScreen() {
           body="Review your relationship intention."
           action="Edit intention"
           onPress={() =>
-            router.push('/intent' as never)
+            router.push({
+              pathname: '/edit-member',
+              params: { section: 'intent' },
+            } as never)
           }
         />
 
@@ -106,7 +115,10 @@ export default function EditProfileScreen() {
           body="Revisit the signals that shape compatibility."
           action="Edit lifestyle"
           onPress={() =>
-            router.push('/lifestyle' as never)
+            router.push({
+              pathname: '/edit-member',
+              params: { section: 'lifestyle' },
+            } as never)
           }
         />
 
@@ -116,9 +128,10 @@ export default function EditProfileScreen() {
           body="Update the answers that give your profile personality."
           action="Edit prompts"
           onPress={() =>
-            router.push(
-              '/perfect-sunday' as never,
-            )
+            router.push({
+              pathname: '/edit-member',
+              params: { section: 'prompts' },
+            } as never)
           }
         />
 
