@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { AuthProvider } from '../src/features/auth/AuthContext';
 import { OnboardingProvider } from '../src/features/onboarding/OnboardingContext';
 import { ProfileProvider } from '../src/features/profile/ProfileContext';
 import { CompatibilityProvider } from '../src/features/compatibility/CompatibilityContext';
@@ -14,7 +15,8 @@ import { colors } from '../src/theme/tokens';
 
 export default function RootLayout() {
   return (
-    <OnboardingProvider>
+    <AuthProvider>
+      <OnboardingProvider>
       <ProfileProvider>
         <CompatibilityProvider>
           <MembershipProvider>
@@ -43,6 +45,7 @@ export default function RootLayout() {
           </MembershipProvider>
         </CompatibilityProvider>
       </ProfileProvider>
-    </OnboardingProvider>
+      </OnboardingProvider>
+    </AuthProvider>
   );
 }

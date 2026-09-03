@@ -3,6 +3,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import {
+  useState,
+} from 'react';
 
 import {
   useRouter,
@@ -24,6 +27,15 @@ import {
   DealBreaker,
   useCompatibility,
 } from '../src/features/compatibility/CompatibilityContext';
+import {
+  useOnboarding,
+} from '../src/features/onboarding/OnboardingContext';
+import {
+  useProfile,
+} from '../src/features/profile/ProfileContext';
+import {
+  persistMemberOnboarding,
+} from '../src/features/member/memberPersistence';
 
 import {
   colors,
@@ -66,19 +78,110 @@ export default function DealbreakersScreen() {
   const router = useRouter();
 
   const {
+    lifestyleSignals,
+    perfectSunday,
+    greenFlag,
+    absoluteNo,
+    chemistryStyle,
     dealBreakers,
     toggleDealBreaker,
   } = useCompatibility();
 
+  const {
+    firstName,
+    birthDate,
+    city,
+    distance,
+  } = useOnboarding();
+
+  const {
+    relationshipIntent,
+    matchPreference,
+    minimumAge,
+    maximumAge,
+  } = useProfile();
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [saveError, setSaveError] =
+    useState<string | null>(null);
+
+  const readyToPersist = Boolean(
+    relationshipIntent &&
+    matchPreference &&
+    chemistryStyle,
+  );
+
+  const buildProfile = async () => {
+    if (
+      saving ||
+      relationshipIntent === null ||
+      matchPreference === null ||
+      chemistryStyle === null
+    ) {
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    const result =
+      await persistMemberOnboarding({
+        firstName,
+        birthDate,
+        city,
+        distanceMiles: distance,
+        relationshipIntent,
+        matchPreference,
+        minimumAge,
+        maximumAge,
+        lifestyleSignals,
+        perfectSunday,
+        greenFlag,
+        absoluteNo,
+        chemistryStyle,
+        dealBreakers,
+      });
+
+    if (result.ok === false) {
+      setSaveError(result.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    router.push('/profile-preview');
+  };
+
   return (
     <OnboardingScreen
       footer={
-        <PrimaryButton
-          label="Build my profile →"
-          onPress={() =>
-            router.push('/profile-preview')
-          }
-        />
+        <View style={styles.footer}>
+          {saveError ? (
+            <Text
+              accessibilityRole="alert"
+              style={styles.error}
+            >
+              {saveError}
+            </Text>
+          ) : null}
+
+          <PrimaryButton
+            label={
+              saving
+                ? 'Building your profile…'
+                : 'Build my profile →'
+            }
+            disabled={
+              saving ||
+              readyToPersist === false
+            }
+            onPress={() => {
+              void buildProfile();
+            }}
+          />
+        </View>
       }
     >
       <View style={styles.content}>
@@ -139,6 +242,15 @@ export default function DealbreakersScreen() {
 }
 
 const styles = StyleSheet.create({
+  footer: {
+    gap: spacing.sm,
+  },
+  error: {
+    color: colors.accent,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     paddingTop: spacing.xl,
