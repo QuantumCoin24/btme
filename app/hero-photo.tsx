@@ -1,10 +1,12 @@
 import {
+  Alert,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import {
+  useLocalSearchParams,
   useRouter,
 } from 'expo-router';
 
@@ -13,8 +15,8 @@ import {
 } from '../src/components/OnboardingScreen';
 
 import {
-  PhotoPlaceholder,
-} from '../src/components/PhotoPlaceholder';
+  ProfilePhotoTile,
+} from '../src/components/ProfilePhotoTile';
 
 import {
   PrimaryButton,
@@ -32,10 +34,21 @@ import {
 
 export default function HeroPhotoScreen() {
   const router = useRouter();
+  const {
+    mode,
+  } = useLocalSearchParams<{
+    mode?: string;
+  }>();
+
+  const isEditMode =
+    mode === 'edit';
 
   const {
     heroPhotoReady,
-    setHeroPhotoReady,
+    heroPhoto,
+    photoMutationPosition,
+    choosePhoto,
+    deletePhoto,
   } = useProfile();
 
   return (
@@ -45,6 +58,16 @@ export default function HeroPhotoScreen() {
           label="Continue →"
           onPress={() => {
             if (heroPhotoReady) {
+              if (isEditMode) {
+                router.push({
+                  pathname: '/photos',
+                  params: {
+                    mode: 'edit',
+                  },
+                } as never);
+                return;
+              }
+
               router.push('/photos');
             }
           }}
@@ -66,15 +89,34 @@ export default function HeroPhotoScreen() {
         </Text>
 
         <View style={styles.photo}>
-          <PhotoPlaceholder
-            label={
-              heroPhotoReady
-                ? 'Hero photo selected'
-                : 'Add your main photo'
-            }
-            selected={heroPhotoReady}
-            onPress={() =>
-              setHeroPhotoReady(true)
+          <ProfilePhotoTile
+            uri={heroPhoto?.signedUrl}
+            label="Add your main photo"
+            hero
+            busy={photoMutationPosition === 1}
+            onPress={() => {
+              void choosePhoto(1).catch((error) => {
+                Alert.alert(
+                  'Photo not saved',
+                  error instanceof Error
+                    ? error.message
+                    : 'Please try again.',
+                );
+              });
+            }}
+            onRemove={
+              heroPhoto
+                ? () => {
+                    void deletePhoto(1).catch((error) => {
+                    Alert.alert(
+                      'Photo not removed',
+                      error instanceof Error
+                        ? error.message
+                        : 'Please try again.',
+                    );
+                  });
+                  }
+                : undefined
             }
           />
         </View>

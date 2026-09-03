@@ -81,7 +81,12 @@ export default function EditProfileScreen() {
           body="Return to the existing hero-photo setup."
           action="Edit photos"
           onPress={() =>
-            router.push('/hero-photo' as never)
+            router.push({
+              pathname: '/hero-photo',
+              params: {
+                mode: 'edit',
+              },
+            } as never)
           }
         />
 

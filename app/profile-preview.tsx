@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-
 import {
+  Image,
   StyleSheet,
   Text,
   View,
@@ -9,27 +9,21 @@ import {
 import {
   OnboardingScreen,
 } from '../src/components/OnboardingScreen';
-
 import {
   PrimaryButton,
 } from '../src/components/PrimaryButton';
-
 import {
   BrandMark,
 } from '../src/components/BrandMark';
-
 import {
   useCompatibility,
 } from '../src/features/compatibility/CompatibilityContext';
-
 import {
   useOnboarding,
 } from '../src/features/onboarding/OnboardingContext';
-
 import {
   useProfile,
 } from '../src/features/profile/ProfileContext';
-
 import {
   colors,
   radius,
@@ -59,6 +53,7 @@ const chemistryLabels = {
 
 export default function ProfilePreviewScreen() {
   const router = useRouter();
+
   const {
     firstName,
     city,
@@ -69,6 +64,7 @@ export default function ProfilePreviewScreen() {
     matchPreference,
     minimumAge,
     maximumAge,
+    heroPhoto,
   } = useProfile();
 
   const {
@@ -81,23 +77,17 @@ export default function ProfilePreviewScreen() {
 
   const intent =
     relationshipIntent
-      ? intentLabels[
-          relationshipIntent
-        ]
+      ? intentLabels[relationshipIntent]
       : 'Not selected';
 
   const preference =
     matchPreference
-      ? preferenceLabels[
-          matchPreference
-        ]
+      ? preferenceLabels[matchPreference]
       : 'Not selected';
 
   const chemistry =
     chemistryStyle
-      ? chemistryLabels[
-          chemistryStyle
-        ]
+      ? chemistryLabels[chemistryStyle]
       : 'Not selected';
 
   return (
@@ -116,7 +106,9 @@ export default function ProfilePreviewScreen() {
 
           <PrimaryButton
             label="See membership →"
-            onPress={() => router.push('/membership')}
+            onPress={() =>
+              router.push('/membership')
+            }
           />
         </View>
       }
@@ -140,19 +132,31 @@ export default function ProfilePreviewScreen() {
         </Text>
 
         <View style={styles.hero}>
-          <View style={styles.photoCircle}>
-            <Text style={styles.photoText}>
-              ✓
-            </Text>
-          </View>
+          {heroPhoto?.signedUrl ? (
+            <Image
+              source={{
+                uri: heroPhoto.signedUrl,
+              }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.heroEmpty}>
+              <View style={styles.photoCircle}>
+                <Text style={styles.photoText}>
+                  +
+                </Text>
+              </View>
 
-          <Text style={styles.heroTitle}>
-            Your hero photo
-          </Text>
+              <Text style={styles.heroTitle}>
+                Your hero photo
+              </Text>
 
-          <Text style={styles.heroBody}>
-            Photo media is still simulated in this build.
-          </Text>
+              <Text style={styles.heroBody}>
+                Add your main photo to complete your profile.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -231,23 +235,19 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
-
   brand: {
     alignSelf: 'flex-start',
     marginBottom: spacing.xl,
   },
-
   eyebrow: {
     color: colors.accent,
     ...typography.eyebrow,
     marginBottom: spacing.md,
   },
-
   title: {
     color: colors.textPrimary,
     ...typography.title,
   },
-
   identity: {
     marginTop: spacing.sm,
     color: colors.textSecondary,
@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '700',
   },
-
   hero: {
     marginTop: spacing.xl,
     minHeight: 230,
@@ -263,11 +262,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    aspectRatio: 4 / 5,
+  },
+  heroEmpty: {
+    minHeight: 230,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.xl,
   },
-
   photoCircle: {
     width: 74,
     height: 74,
@@ -276,14 +282,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   photoText: {
     color: colors.textPrimary,
     fontSize: 32,
     lineHeight: 36,
     fontWeight: '900',
   },
-
   heroTitle: {
     marginTop: spacing.lg,
     color: colors.textPrimary,
@@ -291,7 +295,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: '800',
   },
-
   heroBody: {
     marginTop: spacing.sm,
     color: colors.textMuted,
@@ -299,14 +302,12 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     textAlign: 'center',
   },
-
   section: {
     marginTop: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     paddingBottom: spacing.lg,
   },
-
   sectionLabel: {
     color: colors.accent,
     fontSize: 11,
@@ -314,7 +315,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.6,
   },
-
   sectionValue: {
     marginTop: spacing.sm,
     color: colors.textPrimary,
@@ -322,18 +322,15 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '700',
   },
-
   secondary: {
     marginTop: spacing.xs,
     color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
-
   footerActions: {
     gap: spacing.md,
   },
-
   footerNote: {
     minHeight: 74,
     borderRadius: radius.lg,
@@ -343,7 +340,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
-
   footerTitle: {
     color: colors.textPrimary,
     fontSize: 15,
@@ -351,7 +347,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-
   footerBody: {
     marginTop: spacing.xs,
     color: colors.textMuted,

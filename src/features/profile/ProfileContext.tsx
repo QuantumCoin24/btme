@@ -1,10 +1,23 @@
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
+
+import {
+  useAuth,
+} from '../auth/AuthContext';
+import {
+  loadProfilePhotos,
+  pickProfileImage,
+  ProfilePhoto,
+  removeProfilePhoto,
+  saveProfilePhoto,
+} from './profileMedia';
 
 export type RelationshipIntent =
   | 'relationship'
@@ -17,107 +30,344 @@ export type MatchPreference =
   | 'men'
   | 'everyone';
 
-type ProfileState = {
-  heroPhotoReady: boolean;
-  additionalPhotoCount: number;
-  relationshipIntent: RelationshipIntent | null;
-  matchPreference: MatchPreference | null;
+type ProfileContextValue = {
+  relationshipIntent:
+    RelationshipIntent | null;
+  matchPreference:
+    MatchPreference | null;
   minimumAge: number;
   maximumAge: number;
+  photos: ProfilePhoto[];
+  photosLoading: boolean;
+  photoMutationPosition:
+    number | null;
+  heroPhotoReady: boolean;
+  additionalPhotoCount: number;
+  heroPhoto:
+    ProfilePhoto | null;
+  refreshPhotos: () => Promise<void>;
+  choosePhoto:
+    (position: number) => Promise<void>;
+  deletePhoto:
+    (position: number) => Promise<void>;
+  setRelationshipIntent:
+    (value: RelationshipIntent) => void;
+  setMatchPreference:
+    (value: MatchPreference) => void;
+  setMinimumAge:
+    (value: number) => void;
+  setMaximumAge:
+    (value: number) => void;
 };
-
-type ProfileContextValue =
-  ProfileState & {
-    setHeroPhotoReady: (value: boolean) => void;
-    setAdditionalPhotoCount: (value: number) => void;
-    setRelationshipIntent: (
-      value: RelationshipIntent,
-    ) => void;
-    setMatchPreference: (
-      value: MatchPreference,
-    ) => void;
-    setMinimumAge: (value: number) => void;
-    setMaximumAge: (value: number) => void;
-  };
 
 const ProfileContext =
-  createContext<ProfileContextValue | null>(null);
-
-type ProfileProviderProps = {
-  children: ReactNode;
-};
+  createContext<
+    ProfileContextValue | undefined
+  >(undefined);
 
 export function ProfileProvider({
   children,
-}: ProfileProviderProps) {
-  const [
-    heroPhotoReady,
-    setHeroPhotoReady,
-  ] = useState(false);
-
-  const [
-    additionalPhotoCount,
-    setAdditionalPhotoCount,
-  ] = useState(0);
+}: {
+  children: ReactNode;
+}) {
+  const {
+    user,
+  } = useAuth();
 
   const [
     relationshipIntent,
     setRelationshipIntent,
-  ] = useState<RelationshipIntent | null>(null);
+  ] =
+    useState<
+      RelationshipIntent | null
+    >(null);
 
   const [
     matchPreference,
     setMatchPreference,
-  ] = useState<MatchPreference | null>(null);
+  ] =
+    useState<
+      MatchPreference | null
+    >(null);
 
   const [
     minimumAge,
     setMinimumAge,
-  ] = useState(25);
+  ] =
+    useState(25);
 
   const [
     maximumAge,
     setMaximumAge,
-  ] = useState(40);
+  ] =
+    useState(40);
 
-  const value = useMemo(
-    () => ({
-      heroPhotoReady,
-      additionalPhotoCount,
-      relationshipIntent,
-      matchPreference,
-      minimumAge,
-      maximumAge,
-      setHeroPhotoReady,
-      setAdditionalPhotoCount,
-      setRelationshipIntent,
-      setMatchPreference,
-      setMinimumAge,
-      setMaximumAge,
-    }),
-    [
-      heroPhotoReady,
-      additionalPhotoCount,
-      relationshipIntent,
-      matchPreference,
-      minimumAge,
-      maximumAge,
-    ],
-  );
+  const [
+    photos,
+    setPhotos,
+  ] =
+    useState<ProfilePhoto[]>([]);
+
+  const [
+    photosLoading,
+    setPhotosLoading,
+  ] =
+    useState(false);
+
+  const [
+    photoMutationPosition,
+    setPhotoMutationPosition,
+  ] =
+    useState<number | null>(null);
+
+  const refreshPhotos =
+    useCallback(
+      async () => {
+        if (!user) {
+          setPhotos([]);
+          return;
+        }
+
+        setPhotosLoading(true);
+
+        try {
+          const nextPhotos =
+            await loadProfilePhotos();
+
+          setPhotos(nextPhotos);
+        } finally {
+          setPhotosLoading(false);
+        }
+      },
+      [user],
+    );
+
+  useEffect(() => {
+    let active = true;
+
+    if (!user) {
+      setPhotos([]);
+      setPhotosLoading(false);
+
+      return () => {
+        active = false;
+      };
+    }
+
+    setPhotosLoading(true);
+
+    void loadProfilePhotos()
+      .then((nextPhotos) => {
+        if (active) {
+          setPhotos(nextPhotos);
+        }
+      })
+      .catch((error) => {
+        console.warn(
+          '[BTME] Failed to restore profile photos:',
+          error,
+        );
+
+        if (active) {
+          setPhotos([]);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setPhotosLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
+  const choosePhoto =
+    useCallback(
+      async (
+        position: number,
+      ) => {
+        setPhotoMutationPosition(
+          position,
+        );
+
+        try {
+          const asset =
+            await pickProfileImage();
+
+          if (!asset) {
+            return;
+          }
+
+          const saved =
+            await saveProfilePhoto(
+              position,
+              asset,
+            );
+
+          setPhotos(
+            (current) => {
+              const withoutPosition =
+                current.filter(
+                  (photo) =>
+                    photo.position !==
+                    position,
+                );
+
+              const normalized =
+                saved.isHero
+                  ? withoutPosition.map(
+                      (photo) => ({
+                        ...photo,
+                        isHero: false,
+                      }),
+                    )
+                  : withoutPosition;
+
+              return [
+                ...normalized,
+                saved,
+              ].sort(
+                (left, right) =>
+                  left.position -
+                  right.position,
+              );
+            },
+          );
+        } finally {
+          setPhotoMutationPosition(
+            null,
+          );
+        }
+      },
+      [],
+    );
+
+  const deletePhoto =
+    useCallback(
+      async (
+        position: number,
+      ) => {
+        const photo =
+          photos.find(
+            (candidate) =>
+              candidate.position ===
+              position,
+          );
+
+        if (!photo) {
+          return;
+        }
+
+        setPhotoMutationPosition(
+          position,
+        );
+
+        try {
+          await removeProfilePhoto(
+            photo,
+          );
+
+          setPhotos(
+            (current) =>
+              current.filter(
+                (candidate) =>
+                  candidate.id !==
+                  photo.id,
+              ),
+          );
+        } finally {
+          setPhotoMutationPosition(
+            null,
+          );
+        }
+      },
+      [photos],
+    );
+
+  const heroPhoto =
+    useMemo(
+      () =>
+        photos.find(
+          (photo) =>
+            photo.isHero,
+        ) ??
+        photos.find(
+          (photo) =>
+            photo.position === 1,
+        ) ??
+        null,
+      [photos],
+    );
+
+  const heroPhotoReady =
+    heroPhoto !== null;
+
+  const additionalPhotoCount =
+    useMemo(
+      () =>
+        photos.filter(
+          (photo) =>
+            photo.position > 1,
+        ).length,
+      [photos],
+    );
+
+  const value =
+    useMemo<ProfileContextValue>(
+      () => ({
+        relationshipIntent,
+        matchPreference,
+        minimumAge,
+        maximumAge,
+        photos,
+        photosLoading,
+        photoMutationPosition,
+        heroPhotoReady,
+        additionalPhotoCount,
+        heroPhoto,
+        refreshPhotos,
+        choosePhoto,
+        deletePhoto,
+        setRelationshipIntent,
+        setMatchPreference,
+        setMinimumAge,
+        setMaximumAge,
+      }),
+      [
+        relationshipIntent,
+        matchPreference,
+        minimumAge,
+        maximumAge,
+        photos,
+        photosLoading,
+        photoMutationPosition,
+        heroPhotoReady,
+        additionalPhotoCount,
+        heroPhoto,
+        refreshPhotos,
+        choosePhoto,
+        deletePhoto,
+      ],
+    );
 
   return (
-    <ProfileContext.Provider value={value}>
+    <ProfileContext.Provider
+      value={value}
+    >
       {children}
     </ProfileContext.Provider>
   );
 }
 
 export function useProfile() {
-  const context = useContext(ProfileContext);
+  const context =
+    useContext(ProfileContext);
 
   if (!context) {
     throw new Error(
-      'useProfile must be used inside ProfileProvider',
+      'useProfile must be used within ProfileProvider.',
     );
   }
 

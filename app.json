@@ -29,6 +29,13 @@
           "cameraPermission": "Allow Better Than My Ex to use your camera for identity and liveness verification.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Better Than My Ex to access your photos so you can choose profile pictures.",
+          "cameraPermission": false
+        }
       ]
     ],
     "scheme": "btme",
