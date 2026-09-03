@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AppShellScreen } from "../../src/components/AppShellScreen";
 import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
 import { colors, radius, spacing } from "../../src/theme/tokens";
@@ -21,7 +21,15 @@ export default function DiscoverScreen() {
         <>
           <View style={styles.card}>
             <View style={styles.photoStage}>
-              <Text style={styles.photoInitial}>{currentProfile.accent}</Text>
+              {currentProfile.photoUrl ? (
+                <Image
+                  source={{ uri: currentProfile.photoUrl }}
+                  style={styles.discoveryPhoto}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.photoInitial}>{currentProfile.accent}</Text>
+              )}
 
               <View style={styles.compatibility}>
                 <Text style={styles.compatibilityValue}>
@@ -115,6 +123,11 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
+  discoveryPhoto: {
+    ...StyleSheet.absoluteFill,
+    width: "100%",
+    height: "100%",
+  },
   card: {
     marginTop: spacing.xl,
     overflow: "hidden",

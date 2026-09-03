@@ -150,3 +150,80 @@ export async function sendSparkMessage(
     isMine: true,
   };
 }
+
+export function subscribeToSparkMessages(
+  conversationId: string,
+  onMessage: (message: SparkMessage) => void,
+  onError?: (message: string) => void,
+) {
+  const cleanConversationId = conversationId.trim();
+
+  if (!isSupabaseConfigured || !cleanConversationId) {
+    return () => undefined;
+  }
+
+  let active = true;
+  let memberId: string | null = null;
+
+  void getAuthenticatedMemberId()
+    .then((id) => {
+      memberId = id;
+    })
+    .catch((error) => {
+      if (active && onError) {
+        onError(
+          error instanceof Error
+            ? error.message
+            : "Unable to start realtime Spark.",
+        );
+      }
+    });
+
+  const channel = supabase
+    .channel(`spark:${cleanConversationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${cleanConversationId}`,
+      },
+      (payload) => {
+        if (!active) {
+          return;
+        }
+
+        const row = payload.new as MessageRow;
+
+        if (
+          !row ||
+          typeof row.id !== "string" ||
+          typeof row.body !== "string" ||
+          row.deleted_at
+        ) {
+          return;
+        }
+
+        onMessage({
+          id: row.id,
+          conversationId: row.conversation_id,
+          senderId: row.sender_id,
+          body: row.body,
+          createdAt: row.created_at,
+          createdAtLabel: formatMessageTime(row.created_at),
+          isMine: Boolean(memberId && row.sender_id === memberId),
+        });
+      },
+    )
+    .subscribe((status) => {
+      if (active && status === "CHANNEL_ERROR" && onError) {
+        onError("Realtime Spark connection was interrupted.");
+      }
+    });
+
+  return () => {
+    active = false;
+    void supabase.removeChannel(channel);
+  };
+}

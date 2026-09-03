@@ -14,6 +14,7 @@ import { useDiscovery } from "../../../src/features/discovery/DiscoveryContext";
 import {
   loadSparkMessages,
   sendSparkMessage,
+  subscribeToSparkMessages,
   SparkMessage,
 } from "../../../src/features/messaging/sparkMessaging";
 import { colors, radius, spacing } from "../../../src/theme/tokens";
@@ -97,6 +98,28 @@ export default function SparkScreen() {
   useEffect(() => {
     void refreshMessages();
   }, [refreshMessages]);
+
+  useEffect(() => {
+    if (!conversationId) {
+      return;
+    }
+
+    return subscribeToSparkMessages(
+      conversationId,
+      (incomingMessage) => {
+        setMessages((current) => {
+          if (current.some((message) => message.id === incomingMessage.id)) {
+            return current;
+          }
+
+          return [...current, incomingMessage];
+        });
+      },
+      (message) => {
+        setMessageError((current) => current ?? message);
+      },
+    );
+  }, [conversationId]);
 
   const canSend =
     draft.trim().length > 0 &&
@@ -355,9 +378,7 @@ export default function SparkScreen() {
           </Text>
 
           {datePlanSaved ? (
-            <Text style={styles.dateSaved}>
-              Date plan saved on this device.
-            </Text>
+            <Text style={styles.dateSaved}>Date plan saved.</Text>
           ) : null}
 
           {planningDate ? (

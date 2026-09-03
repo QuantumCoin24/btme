@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { getDatingPhotoUrl } from "./datingMedia";
 
 export type CompatibilitySignal = {
   label: string;
@@ -27,6 +28,7 @@ export type DatingProfile = {
   compatibilitySignals: CompatibilitySignal[];
   accent: string;
   verified?: boolean;
+  photoUrl?: string | null;
 };
 
 export type Connection = {
@@ -329,9 +331,25 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       }
 
       const rows = (data ?? []) as DiscoveryIntroductionRow[];
+      const profiles = rows.map(introductionToProfile);
 
-      setIntroductions(rows.map(introductionToProfile));
+      const hydratedProfiles = await Promise.all(
+        profiles.map(async (profile) => {
+          try {
+            return {
+              ...profile,
+              photoUrl: await getDatingPhotoUrl(profile.id),
+            };
+          } catch {
+            return {
+              ...profile,
+              photoUrl: null,
+            };
+          }
+        }),
+      );
 
+      setIntroductions(hydratedProfiles);
       setDiscoveryError(null);
     } catch (error) {
       setDiscoveryError(errorMessage(error));
