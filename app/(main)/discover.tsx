@@ -1,20 +1,7 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  AppShellScreen,
-} from '../../src/components/AppShellScreen';
-import {
-  useDiscovery,
-} from '../../src/features/discovery/DiscoveryContext';
-import {
-  colors,
-  radius,
-  spacing,
-} from '../../src/theme/tokens';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { AppShellScreen } from "../../src/components/AppShellScreen";
+import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
+import { colors, radius, spacing } from "../../src/theme/tokens";
 
 export default function DiscoverScreen() {
   const {
@@ -34,62 +21,42 @@ export default function DiscoverScreen() {
         <>
           <View style={styles.card}>
             <View style={styles.photoStage}>
-              <Text style={styles.photoInitial}>
-                {currentProfile.accent}
-              </Text>
+              <Text style={styles.photoInitial}>{currentProfile.accent}</Text>
 
               <View style={styles.compatibility}>
                 <Text style={styles.compatibilityValue}>
                   {currentProfile.compatibility}%
                 </Text>
 
-                <Text style={styles.compatibilityLabel}>
-                  COMPATIBILITY
-                </Text>
+                <Text style={styles.compatibilityLabel}>COMPATIBILITY</Text>
               </View>
             </View>
 
             <View style={styles.profileBody}>
               <Text style={styles.name}>
-                {currentProfile.firstName},{' '}
-                {currentProfile.age}
+                {currentProfile.firstName}, {currentProfile.age}
               </Text>
 
-              <Text style={styles.city}>
-                {currentProfile.city}
-              </Text>
+              <Text style={styles.city}>{currentProfile.city}</Text>
 
-              <Text style={styles.headline}>
-                {currentProfile.headline}
-              </Text>
+              <Text style={styles.headline}>{currentProfile.headline}</Text>
 
               <View style={styles.divider} />
 
-              <Text style={styles.promptLabel}>
-                {currentProfile.prompt}
-              </Text>
+              <Text style={styles.promptLabel}>{currentProfile.prompt}</Text>
 
               <Text style={styles.promptAnswer}>
                 {currentProfile.promptAnswer}
               </Text>
 
               <View style={styles.signals}>
-                {currentProfile.compatibilitySignals.map(
-                  (signal) => (
-                    <View
-                      key={signal.label}
-                      style={styles.signal}
-                    >
-                      <Text style={styles.signalLabel}>
-                        {signal.label}
-                      </Text>
+                {currentProfile.compatibilitySignals.map((signal) => (
+                  <View key={signal.label} style={styles.signal}>
+                    <Text style={styles.signalLabel}>{signal.label}</Text>
 
-                      <Text style={styles.signalDetail}>
-                        {signal.detail}
-                      </Text>
-                    </View>
-                  ),
-                )}
+                    <Text style={styles.signalDetail}>{signal.detail}</Text>
+                  </View>
+                ))}
               </View>
             </View>
           </View>
@@ -105,13 +72,9 @@ export default function DiscoverScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.passSymbol}>
-                ×
-              </Text>
+              <Text style={styles.passSymbol}>×</Text>
 
-              <Text style={styles.passLabel}>
-                PASS
-              </Text>
+              <Text style={styles.passLabel}>PASS</Text>
             </Pressable>
 
             <Pressable
@@ -124,37 +87,26 @@ export default function DiscoverScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.likeSymbol}>
-                ♥
-              </Text>
+              <Text style={styles.likeSymbol}>♥</Text>
 
-              <Text style={styles.likeLabel}>
-                I LIKE THIS
-              </Text>
+              <Text style={styles.likeLabel}>I LIKE THIS</Text>
             </Pressable>
           </View>
 
           <Text style={styles.remaining}>
-            {introductions.length}{' '}
-            {introductions.length === 1
-              ? 'introduction'
-              : 'introductions'}{' '}
+            {introductions.length}{" "}
+            {introductions.length === 1 ? "introduction" : "introductions"}{" "}
             available in this preview
           </Text>
         </>
       ) : (
         <View style={styles.complete}>
-          <Text style={styles.completeHeart}>
-            ♥
-          </Text>
+          <Text style={styles.completeHeart}>♥</Text>
 
-          <Text style={styles.completeTitle}>
-            You&apos;re all caught up.
-          </Text>
+          <Text style={styles.completeTitle}>You&apos;re all caught up.</Text>
 
           <Text style={styles.completeBody}>
-            You&apos;ve reached the end of these
-            preview introductions.
+            There are no more introductions for you right now.
           </Text>
         </View>
       )}
@@ -165,7 +117,7 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   card: {
     marginTop: spacing.xl,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
@@ -174,18 +126,18 @@ const styles = StyleSheet.create({
   photoStage: {
     minHeight: 310,
     backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   photoInitial: {
     color: colors.textPrimary,
     fontSize: 104,
     lineHeight: 112,
-    fontWeight: '800',
+    fontWeight: "800",
     opacity: 0.12,
   },
   compatibility: {
-    position: 'absolute',
+    position: "absolute",
     left: spacing.md,
     bottom: spacing.md,
     paddingHorizontal: spacing.md,
@@ -197,14 +149,14 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 20,
     lineHeight: 24,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   compatibilityLabel: {
     marginTop: 2,
     color: colors.textMuted,
     fontSize: 9,
     lineHeight: 12,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1.2,
   },
   profileBody: {
@@ -214,7 +166,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 30,
     lineHeight: 36,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   city: {
     marginTop: 2,
@@ -227,7 +179,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 26,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   divider: {
     height: 1,
@@ -238,9 +190,9 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.3,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   promptAnswer: {
     marginTop: spacing.sm,
@@ -261,27 +213,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   signalDetail: {
     marginTop: 3,
     color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     marginTop: spacing.md,
   },
   action: {
     minHeight: 64,
     borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   passAction: {
     width: 86,
@@ -306,7 +258,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 9,
     lineHeight: 12,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.2,
   },
   likeSymbol: {
@@ -319,7 +271,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 10,
     lineHeight: 13,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.2,
   },
   remaining: {
@@ -327,7 +279,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
   complete: {
     minHeight: 390,
@@ -337,8 +289,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   completeHeart: {
     color: colors.accent,
@@ -350,8 +302,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: "900",
+    textAlign: "center",
   },
   completeBody: {
     marginTop: spacing.sm,
@@ -359,6 +311,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });
