@@ -1,34 +1,19 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import {
-  AppShellScreen,
-} from '../../src/components/AppShellScreen';
-import {
-  useDiscovery,
-} from '../../src/features/discovery/DiscoveryContext';
-import {
-  colors,
-  radius,
-  spacing,
-} from '../../src/theme/tokens';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { AppShellScreen } from "../../src/components/AppShellScreen";
+import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
+import { colors, radius, spacing } from "../../src/theme/tokens";
 
 export default function ConnectionsScreen() {
   const router = useRouter();
 
-  const {
-    connections,
-  } = useDiscovery();
+  const { connections } = useDiscovery();
 
   return (
     <AppShellScreen
       eyebrow="CONNECTIONS"
       title="Chemistry starts here."
-      body="The people you choose to explore further will appear here while the full mutual-match system is built."
+      body="When the feeling is mutual, your matches appear here. Open Spark™ and start the conversation."
     >
       {connections.length > 0 ? (
         <View style={styles.list}>
@@ -39,8 +24,7 @@ export default function ConnectionsScreen() {
               accessibilityLabel={`Open Spark with ${connection.profile.firstName}`}
               onPress={() =>
                 router.push({
-                  pathname:
-                    '/spark/[connectionId]',
+                  pathname: "/spark/[connectionId]",
                   params: {
                     connectionId: connection.id,
                   },
@@ -59,53 +43,40 @@ export default function ConnectionsScreen() {
 
               <View style={styles.details}>
                 <Text style={styles.name}>
-                  {connection.profile.firstName},{' '}
-                  {connection.profile.age}
+                  {connection.profile.firstName}, {connection.profile.age}
                 </Text>
 
                 <Text style={styles.meta}>
                   {connection.profile.city}
-                  {'  ·  '}
-                  {connection.profile.compatibility}%
-                  {' compatibility'}
+                  {"  ·  "}
+                  {connection.profile.compatibility}%{" compatibility"}
                 </Text>
 
-                <Text style={styles.status}>
-                  {connection.connectedAtLabel}
-                </Text>
+                <Text style={styles.status}>{connection.connectedAtLabel}</Text>
               </View>
 
-              <Text style={styles.heart}>
-                ♥
-              </Text>
+              <Text style={styles.heart}>♥</Text>
             </Pressable>
           ))}
 
           <View style={styles.messageNote}>
             <Text style={styles.messageNoteTitle}>
-              Spark™ comes next.
+              You matched. Now Spark™.
             </Text>
 
             <Text style={styles.messageNoteBody}>
-              This preview stores your choices
-              locally. Mutual matching and messaging
-              are not active yet.
+              Open a connection to start your private conversation.
             </Text>
           </View>
         </View>
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.symbol}>
-            ✦
-          </Text>
+          <Text style={styles.symbol}>✦</Text>
 
-          <Text style={styles.emptyTitle}>
-            No connections yet
-          </Text>
+          <Text style={styles.emptyTitle}>No connections yet</Text>
 
           <Text style={styles.emptyBody}>
-            Choose an introduction in Discover and
-            it will appear here for this preview.
+            When you both choose each other, your connection will appear here.
           </Text>
         </View>
       )}
@@ -125,8 +96,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   connectionPressed: {
     opacity: 0.72,
@@ -136,14 +107,14 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
     color: colors.textPrimary,
     fontSize: 24,
     lineHeight: 29,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   details: {
     flex: 1,
@@ -153,7 +124,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 23,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   meta: {
     marginTop: 3,
@@ -166,9 +137,9 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   heart: {
     marginLeft: spacing.sm,
@@ -186,7 +157,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 16,
     lineHeight: 21,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   messageNoteBody: {
     marginTop: spacing.xs,
@@ -202,7 +173,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    alignItems: 'center',
+    alignItems: "center",
   },
   symbol: {
     color: colors.accent,
@@ -214,14 +185,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 20,
     lineHeight: 26,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: "800",
+    textAlign: "center",
   },
   emptyBody: {
     marginTop: spacing.sm,
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

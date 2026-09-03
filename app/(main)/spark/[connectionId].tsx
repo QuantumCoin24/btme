@@ -7,102 +7,125 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDiscovery } from "../../../src/features/discovery/DiscoveryContext";
 import {
-  useLocalSearchParams,
-  useRouter,
-} from 'expo-router';
-import {
-  useMemo,
-  useState,
-} from 'react';
-import {
-  useDiscovery,
-} from '../../../src/features/discovery/DiscoveryContext';
-import {
-  colors,
-  radius,
-  spacing,
-} from '../../../src/theme/tokens';
+  loadSparkMessages,
+  sendSparkMessage,
+  SparkMessage,
+} from "../../../src/features/messaging/sparkMessaging";
+import { colors, radius, spacing } from "../../../src/theme/tokens";
+
+function errorMessage(error: unknown) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong. Please try again.";
+}
 
 export default function SparkScreen() {
   const router = useRouter();
 
-  const {
-    connectionId,
-  } = useLocalSearchParams<{
+  const { connectionId } = useLocalSearchParams<{
     connectionId?: string | string[];
   }>();
 
   const resolvedConnectionId =
-    typeof connectionId === 'string'
-      ? connectionId
-      : connectionId?.[0] ?? '';
+    typeof connectionId === "string" ? connectionId : (connectionId?.[0] ?? "");
 
-  const {
-    getConnection,
-    getSparkMessages,
-    addSparkMessage,
-    createDatePlan,
-  } = useDiscovery();
+  const { getConnection, createDatePlan } = useDiscovery();
 
   const connection = useMemo(
     () => getConnection(resolvedConnectionId),
-    [
-      getConnection,
-      resolvedConnectionId,
-    ],
+    [getConnection, resolvedConnectionId],
   );
 
-  const messages = getSparkMessages(
-    resolvedConnectionId,
-  );
+  const conversationId = connection?.conversationId?.trim() ?? "";
 
-  const [
-    draft,
-    setDraft,
-  ] = useState('');
+  const [messages, setMessages] = useState<SparkMessage[]>([]);
 
-  const [
-    planningDate,
-    setPlanningDate,
-  ] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  const [
-    dateDay,
-    setDateDay,
-  ] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
-  const [
-    dateTime,
-    setDateTime,
-  ] = useState('');
+  const [messageError, setMessageError] = useState<string | null>(null);
 
-  const [
-    datePlace,
-    setDatePlace,
-  ] = useState('');
+  const [draft, setDraft] = useState("");
 
-  const [
-    datePlanSaved,
-    setDatePlanSaved,
-  ] = useState(false);
+  const [planningDate, setPlanningDate] = useState(false);
 
-  const canAdd =
-    draft.trim().length > 0 &&
-    Boolean(connection);
+  const [dateDay, setDateDay] = useState("");
 
-  function handleAddMessage() {
-    if (!canAdd) {
+  const [dateTime, setDateTime] = useState("");
+
+  const [datePlace, setDatePlace] = useState("");
+
+  const [datePlanSaved, setDatePlanSaved] = useState(false);
+
+  const refreshMessages = useCallback(async () => {
+    if (!conversationId) {
+      setMessages([]);
       return;
     }
 
-    addSparkMessage(
-      resolvedConnectionId,
-      draft,
-    );
+    setIsLoadingMessages(true);
+    setMessageError(null);
 
-    setDraft('');
+    try {
+      const nextMessages = await loadSparkMessages(conversationId);
+
+      setMessages(nextMessages);
+    } catch (error) {
+      setMessageError(errorMessage(error));
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    void refreshMessages();
+  }, [refreshMessages]);
+
+  const canSend =
+    draft.trim().length > 0 &&
+    draft.trim().length <= 4000 &&
+    Boolean(connection) &&
+    Boolean(conversationId) &&
+    !isSendingMessage;
+
+  async function handleSendMessage() {
+    if (!canSend) {
+      return;
+    }
+
+    const body = draft.trim();
+
+    setIsSendingMessage(true);
+    setMessageError(null);
+
+    try {
+      const sentMessage = await sendSparkMessage(conversationId, body);
+
+      setMessages((current) => [...current, sentMessage]);
+
+      setDraft("");
+    } catch (error) {
+      setMessageError(errorMessage(error));
+    } finally {
+      setIsSendingMessage(false);
+    }
   }
 
   const canSaveDate =
@@ -116,53 +139,63 @@ export default function SparkScreen() {
       return;
     }
 
-    createDatePlan(
-      resolvedConnectionId,
-      dateDay,
-      dateTime,
-      datePlace,
-    );
+    createDatePlan(resolvedConnectionId, dateDay, dateTime, datePlace);
 
-    setDateDay('');
-    setDateTime('');
-    setDatePlace('');
-    setPlanningDate(false);
     setDatePlanSaved(true);
+    setPlanningDate(false);
+    setDateDay("");
+    setDateTime("");
+    setDatePlace("");
   }
 
   if (!connection) {
     return (
-      <View style={styles.screen}>
-        <View style={styles.safeTop}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Back to connections"
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.backSymbol}>
-              ‹
-            </Text>
-          </Pressable>
-        </View>
+      <View style={styles.missing}>
+        <Text style={styles.missingSymbol}>✦</Text>
 
-        <View style={styles.missing}>
-          <Text style={styles.missingSymbol}>
-            ✦
-          </Text>
+        <Text style={styles.missingTitle}>Spark unavailable</Text>
 
-          <Text style={styles.missingTitle}>
-            Connection unavailable
-          </Text>
+        <Text style={styles.missingBody}>
+          This connection is not available right now.
+        </Text>
 
-          <Text style={styles.missingBody}>
-            This local Spark preview needs an
-            active connection.
-          </Text>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to connections"
+          onPress={() => router.replace("/(main)/connections")}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.secondaryButtonText}>Back to Connections</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!conversationId) {
+    return (
+      <View style={styles.missing}>
+        <Text style={styles.missingSymbol}>✦</Text>
+
+        <Text style={styles.missingTitle}>Spark is getting ready</Text>
+
+        <Text style={styles.missingBody}>
+          Your match exists, but its conversation is not available yet.
+        </Text>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back to connections"
+          onPress={() => router.replace("/(main)/connections")}
+          style={({ pressed }) => [
+            styles.secondaryButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.secondaryButtonText}>Back to Connections</Text>
+        </Pressable>
       </View>
     );
   }
@@ -170,11 +203,7 @@ export default function SparkScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={
-        Platform.OS === 'ios'
-          ? 'padding'
-          : undefined
-      }
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.header}>
         <Pressable
@@ -186,26 +215,21 @@ export default function SparkScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.backSymbol}>
-            ‹
-          </Text>
+          <Text style={styles.backSymbol}>‹</Text>
         </Pressable>
 
-        <View style={styles.identity}>
+        <View style={styles.headerIdentity}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {connection.profile.accent}
-            </Text>
+            <Text style={styles.avatarText}>{connection.profile.accent}</Text>
           </View>
 
-          <View style={styles.identityCopy}>
-            <Text style={styles.name}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerName}>
               {connection.profile.firstName}
             </Text>
 
-            <Text style={styles.compatibility}>
-              {connection.profile.compatibility}%
-              {' compatibility'}
+            <Text style={styles.headerMeta}>
+              {connection.profile.compatibility}%{" compatibility"}
             </Text>
           </View>
         </View>
@@ -215,53 +239,67 @@ export default function SparkScreen() {
 
       <ScrollView
         style={styles.messages}
-        contentContainerStyle={
-          styles.messagesContent
-        }
+        contentContainerStyle={styles.messagesContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.sparkIntro}>
-          <Text style={styles.sparkEyebrow}>
-            SPARK™
-          </Text>
+          <Text style={styles.sparkEyebrow}>SPARK™</Text>
 
-          <Text style={styles.sparkTitle}>
-            Well, this is promising.
-          </Text>
+          <Text style={styles.sparkTitle}>The match happened.</Text>
 
           <Text style={styles.sparkBody}>
-            You chose to explore this connection
-            in the local preview. When production
-            matching and messaging are connected,
-            your conversation can begin here.
+            You both chose each other. Keep it simple, be yourself, and see
+            where the conversation goes.
           </Text>
-
-          <View style={styles.signal}>
-            <Text style={styles.signalValue}>
-              {connection.profile.compatibility}%
-            </Text>
-
-            <Text style={styles.signalLabel}>
-              COMPATIBILITY
-            </Text>
-          </View>
         </View>
 
-        {messages.length > 0 ? (
+        <View style={styles.connectionCard}>
+          <Text style={styles.connectionLabel}>YOUR CONNECTION</Text>
+
+          <Text style={styles.connectionName}>
+            {connection.profile.firstName}, {connection.profile.age}
+          </Text>
+
+          <Text style={styles.connectionMeta}>
+            {connection.profile.city}
+            {"  ·  "}
+            {connection.connectedAtLabel}
+          </Text>
+        </View>
+
+        {isLoadingMessages ? (
+          <View style={styles.emptyConversation}>
+            <Text style={styles.emptyConversationTitle}>
+              Loading your Spark…
+            </Text>
+          </View>
+        ) : messages.length > 0 ? (
           <View style={styles.messageList}>
             {messages.map((message) => (
               <View
                 key={message.id}
-                style={styles.messageRow}
+                style={[
+                  styles.messageRow,
+                  message.isMine
+                    ? styles.messageRowMine
+                    : styles.messageRowTheirs,
+                ]}
               >
-                <View style={styles.messageBubble}>
-                  <Text style={styles.messageBody}>
-                    {message.body}
-                  </Text>
+                <View
+                  style={[
+                    styles.messageBubble,
+                    message.isMine
+                      ? styles.messageBubbleMine
+                      : styles.messageBubbleTheirs,
+                  ]}
+                >
+                  <Text style={styles.messageBody}>{message.body}</Text>
 
                   <Text style={styles.messageMeta}>
-                    YOUR LOCAL PREVIEW ·{' '}
-                    {message.createdAtLabel}
+                    {message.isMine ? "You" : connection.profile.firstName}
+                    {message.createdAtLabel
+                      ? ` · ${message.createdAtLabel}`
+                      : ""}
                   </Text>
                 </View>
               </View>
@@ -269,185 +307,141 @@ export default function SparkScreen() {
           </View>
         ) : (
           <View style={styles.emptyConversation}>
-            <Text style={styles.emptySymbol}>
-              ♥
-            </Text>
+            <Text style={styles.emptyConversationSymbol}>♥</Text>
 
-            <Text style={styles.emptyTitle}>
-              Start with something real.
-            </Text>
+            <Text style={styles.emptyConversationTitle}>Start the Spark</Text>
 
-            <Text style={styles.emptyBody}>
-              Write a first message below.
-              It stays on this device as
-              preview state and is not sent
-              to another person.
+            <Text style={styles.emptyConversationBody}>
+              You matched. Write the first message below.
             </Text>
           </View>
         )}
-      </ScrollView>
 
-        <View style={styles.datePlanningWrap}>
-          {!planningDate ? (
-            <>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Plan a local date with ${connection.profile.firstName}`}
-                onPress={() => {
-                  setPlanningDate(true);
-                  setDatePlanSaved(false);
-                }}
-                style={({ pressed }) => [
-                  styles.planDateButton,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Text style={styles.planDateEyebrow}>
-                  DATE BETTER
-                </Text>
+        {messageError ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{messageError}</Text>
 
-                <Text style={styles.planDateTitle}>
-                  Plan a date
-                </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading messages"
+              onPress={() => void refreshMessages()}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
-                <Text style={styles.planDateArrow}>
-                  →
-                </Text>
-              </Pressable>
+        <View style={styles.dateCard}>
+          <Text style={styles.dateEyebrow}>TAKE IT OFF THE APP</Text>
 
-              {datePlanSaved && (
-                <Text style={styles.dateSaved}>
-                  Date plan saved locally · nothing was sent
-                </Text>
-              )}
-            </>
-          ) : (
-            <View style={styles.datePlanner}>
-              <View style={styles.datePlannerHeader}>
-                <View>
-                  <Text style={styles.datePlannerEyebrow}>
-                    DATE BETTER
-                  </Text>
+          <Text style={styles.dateTitle}>Ready to meet?</Text>
 
-                  <Text style={styles.datePlannerTitle}>
-                    Make a plan.
-                  </Text>
-                </View>
+          <Text style={styles.dateBody}>
+            Plan the date here. Date persistence and SafeDate activation remain
+            a separate production phase.
+          </Text>
 
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Close date planner"
-                  onPress={() =>
-                    setPlanningDate(false)
-                  }
-                  style={({ pressed }) => [
-                    styles.closePlanner,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={styles.closePlannerText}>
-                    ×
-                  </Text>
-                </Pressable>
-              </View>
+          {datePlanSaved ? (
+            <Text style={styles.dateSaved}>
+              Date plan saved on this device.
+            </Text>
+          ) : null}
 
-              <Text style={styles.datePlannerBody}>
-                Keep it simple. Add the day, time and place you have in mind.
-              </Text>
-
+          {planningDate ? (
+            <View style={styles.dateForm}>
               <TextInput
-                accessibilityLabel="Date day"
                 value={dateDay}
                 onChangeText={setDateDay}
-                placeholder="Day · e.g. Friday 4 September"
+                placeholder="Day"
                 placeholderTextColor={colors.textMuted}
-                maxLength={60}
                 style={styles.dateInput}
               />
 
               <TextInput
-                accessibilityLabel="Date time"
                 value={dateTime}
                 onChangeText={setDateTime}
-                placeholder="Time · e.g. 7:30 PM"
+                placeholder="Time"
                 placeholderTextColor={colors.textMuted}
-                maxLength={40}
                 style={styles.dateInput}
               />
 
               <TextInput
-                accessibilityLabel="Date place"
                 value={datePlace}
                 onChangeText={setDatePlace}
-                placeholder="Place · e.g. Drinks in Manchester"
+                placeholder="Place"
                 placeholderTextColor={colors.textMuted}
-                maxLength={120}
                 style={styles.dateInput}
               />
 
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Save local date plan"
+                accessibilityLabel="Save date plan"
                 disabled={!canSaveDate}
                 onPress={handleSaveDate}
                 style={({ pressed }) => [
-                  styles.saveDateButton,
-                  !canSaveDate &&
-                    styles.saveDateButtonDisabled,
-                  pressed &&
-                    canSaveDate &&
-                    styles.pressed,
+                  styles.primaryButton,
+                  !canSaveDate && styles.primaryButtonDisabled,
+                  pressed && canSaveDate && styles.pressed,
                 ]}
               >
-                <Text style={styles.saveDateButtonText}>
-                  Save date plan
-                </Text>
+                <Text style={styles.primaryButtonText}>Save Date Plan</Text>
               </Pressable>
-
-              <Text style={styles.datePlannerDisclosure}>
-                LOCAL PREVIEW ONLY · NOT SENT OR ACCEPTED
-              </Text>
             </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Plan a date"
+              onPress={() => {
+                setDatePlanSaved(false);
+                setPlanningDate(true);
+              }}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.secondaryButtonText}>Plan a Date</Text>
+            </Pressable>
           )}
         </View>
+      </ScrollView>
 
-      <View style={styles.composerWrap}>
+      <View style={styles.composerArea}>
         <View style={styles.composer}>
           <TextInput
-            accessibilityLabel="Spark message"
             value={draft}
             onChangeText={setDraft}
-            placeholder="Say something worth replying to…"
-            placeholderTextColor={
-              colors.textMuted
-            }
+            placeholder={`Message ${connection.profile.firstName}`}
+            placeholderTextColor={colors.textMuted}
             multiline
-            maxLength={500}
+            maxLength={4000}
+            accessibilityLabel="Spark message"
             style={styles.input}
           />
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add local preview message"
-            disabled={!canAdd}
-            onPress={handleAddMessage}
+            accessibilityLabel="Send Spark message"
+            disabled={!canSend}
+            onPress={() => void handleSendMessage()}
             style={({ pressed }) => [
               styles.sendButton,
-              !canAdd &&
-                styles.sendButtonDisabled,
-              pressed &&
-                canAdd &&
-                styles.pressed,
+              !canSend && styles.sendButtonDisabled,
+              pressed && canSend && styles.pressed,
             ]}
           >
             <Text style={styles.sendSymbol}>
-              ↑
+              {isSendingMessage ? "…" : "↑"}
             </Text>
           </Pressable>
         </View>
 
         <Text style={styles.disclosure}>
-          Preview only · messages are not sent
+          Messages are shared with your match
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -459,356 +453,308 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  safeTop: {
-    paddingTop: 64,
-    paddingHorizontal: spacing.lg,
-  },
   header: {
-    paddingTop: 58,
-    paddingBottom: spacing.md,
+    minHeight: 78,
     paddingHorizontal: spacing.md,
+    paddingTop: Platform.OS === "ios" ? spacing.md : spacing.sm,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   backButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backSymbol: {
-    marginTop: -3,
-    color: colors.textPrimary,
-    fontSize: 38,
-    lineHeight: 40,
-    fontWeight: '300',
-  },
-  identity: {
-    flex: 1,
-    marginHorizontal: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatar: {
     width: 42,
     height: 42,
-    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backSymbol: {
+    color: colors.textPrimary,
+    fontSize: 36,
+    lineHeight: 38,
+    fontWeight: "300",
+  },
+  headerIdentity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
     color: colors.textPrimary,
-    fontSize: 17,
-    lineHeight: 21,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: "900",
   },
-  identityCopy: {
+  headerCopy: {
     marginLeft: spacing.sm,
   },
-  name: {
+  headerName: {
     color: colors.textPrimary,
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '900',
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "900",
   },
-  compatibility: {
-    marginTop: 2,
+  headerMeta: {
+    marginTop: 1,
     color: colors.textMuted,
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '700',
   },
   headerSpacer: {
-    width: 46,
+    width: 42,
   },
   messages: {
     flex: 1,
   },
   messagesContent: {
-    flexGrow: 1,
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   sparkIntro: {
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
   },
   sparkEyebrow: {
     color: colors.accent,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '900',
-    letterSpacing: 2,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "900",
+    letterSpacing: 1.4,
   },
   sparkTitle: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     color: colors.textPrimary,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '900',
-    letterSpacing: -0.6,
+    fontSize: 25,
+    lineHeight: 31,
+    fontWeight: "900",
   },
   sparkBody: {
     marginTop: spacing.sm,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
   },
-  signal: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.background,
+  connectionCard: {
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
   },
-  signalValue: {
+  connectionLabel: {
     color: colors.accent,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '900',
+    fontSize: 9,
+    lineHeight: 13,
+    fontWeight: "900",
+    letterSpacing: 1.2,
   },
-  signalLabel: {
-    marginTop: 2,
+  connectionName: {
+    marginTop: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: "900",
+  },
+  connectionMeta: {
+    marginTop: 3,
     color: colors.textMuted,
-    fontSize: 8,
-    lineHeight: 11,
-    fontWeight: '900',
-    letterSpacing: 1.1,
+    fontSize: 12,
+    lineHeight: 17,
   },
   messageList: {
-    marginTop: spacing.xl,
+    marginTop: spacing.lg,
     gap: spacing.sm,
   },
   messageRow: {
-    alignItems: 'flex-end',
+    width: "100%",
+  },
+  messageRowMine: {
+    alignItems: "flex-end",
+  },
+  messageRowTheirs: {
+    alignItems: "flex-start",
   },
   messageBubble: {
-    maxWidth: '84%',
+    maxWidth: "84%",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
+  },
+  messageBubbleMine: {
     backgroundColor: colors.accent,
+  },
+  messageBubbleTheirs: {
+    backgroundColor: colors.surfaceElevated,
   },
   messageBody: {
     color: colors.textPrimary,
     fontSize: 15,
     lineHeight: 21,
-    fontWeight: '600',
   },
   messageMeta: {
-    marginTop: spacing.xs,
-    color: colors.textPrimary,
-    fontSize: 8,
-    lineHeight: 11,
-    fontWeight: '900',
-    letterSpacing: 0.7,
-    opacity: 0.72,
-  },
-  emptyConversation: {
-    flex: 1,
-    minHeight: 250,
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptySymbol: {
-    color: colors.accent,
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  emptyTitle: {
-    marginTop: spacing.md,
-    color: colors.textPrimary,
-    fontSize: 18,
-    lineHeight: 24,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  emptyBody: {
-    maxWidth: 290,
-    marginTop: spacing.sm,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  datePlanningWrap: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    backgroundColor: colors.background,
-  },
-
-  planDateButton: {
-    minHeight: 70,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  planDateEyebrow: {
-    color: colors.accent,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: '900',
-    letterSpacing: 1.2,
-  },
-
-  planDateTitle: {
-    flex: 1,
-    marginLeft: spacing.md,
-    color: colors.textPrimary,
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: '900',
-  },
-
-  planDateArrow: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '500',
-  },
-
-  dateSaved: {
-    marginTop: spacing.xs,
+    marginTop: 5,
     color: colors.textMuted,
     fontSize: 9,
     lineHeight: 13,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontWeight: "700",
   },
-
-  datePlanner: {
-    padding: spacing.lg,
+  emptyConversation: {
+    marginTop: spacing.lg,
+    padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.lg,
-    backgroundColor: colors.surface,
+    alignItems: "center",
   },
-
-  datePlannerHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-
-  datePlannerEyebrow: {
+  emptyConversationSymbol: {
     color: colors.accent,
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '900',
-    letterSpacing: 1.5,
+    fontSize: 25,
+    lineHeight: 30,
   },
-
-  datePlannerTitle: {
+  emptyConversationTitle: {
     marginTop: spacing.xs,
     color: colors.textPrimary,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '900',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900",
   },
-
-  datePlannerBody: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    color: colors.textSecondary,
+  emptyConversationBody: {
+    marginTop: spacing.xs,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: "center",
+  },
+  errorCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surfaceElevated,
+  },
+  errorText: {
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 19,
   },
-
-  closePlanner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  closePlannerText: {
-    marginTop: -2,
-    color: colors.textSecondary,
-    fontSize: 24,
-    lineHeight: 26,
-    fontWeight: '400',
-  },
-
-  dateInput: {
-    minHeight: 52,
+  retryButton: {
     marginTop: spacing.sm,
+    alignSelf: "flex-start",
+  },
+  retryButtonText: {
+    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "900",
+  },
+  dateCard: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+  },
+  dateEyebrow: {
+    color: colors.accent,
+    fontSize: 9,
+    lineHeight: 13,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  dateTitle: {
+    marginTop: spacing.xs,
+    color: colors.textPrimary,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: "900",
+  },
+  dateBody: {
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  dateSaved: {
+    marginTop: spacing.sm,
+    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "800",
+  },
+  dateForm: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  dateInput: {
+    minHeight: 46,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    backgroundColor: colors.background,
     color: colors.textPrimary,
+    backgroundColor: colors.background,
     fontSize: 14,
-    lineHeight: 20,
   },
-
-  saveDateButton: {
-    minHeight: 52,
-    marginTop: spacing.md,
+  primaryButton: {
+    minHeight: 48,
+    marginTop: spacing.xs,
     borderRadius: radius.md,
     backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  saveDateButtonDisabled: {
-    opacity: 0.28,
+  primaryButtonDisabled: {
+    opacity: 0.3,
   },
-
-  saveDateButtonText: {
+  primaryButtonText: {
     color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: '900',
+    fontSize: 13,
+    fontWeight: "900",
   },
-
-  datePlannerDisclosure: {
-    marginTop: spacing.sm,
-    color: colors.textMuted,
-    fontSize: 8,
-    lineHeight: 12,
-    fontWeight: '800',
-    letterSpacing: 0.7,
-    textAlign: 'center',
+  secondaryButton: {
+    minHeight: 46,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  composerWrap: {
+  secondaryButtonText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  composerArea: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
-    paddingBottom: 28,
+    paddingBottom: Platform.OS === "ios" ? spacing.lg : spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
   composer: {
-    minHeight: 56,
+    minHeight: 52,
     paddingLeft: spacing.md,
-    paddingRight: spacing.xs,
-    paddingVertical: spacing.xs,
+    paddingRight: 4,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+    borderRadius: 26,
+    backgroundColor: colors.surfaceElevated,
+    flexDirection: "row",
+    alignItems: "flex-end",
   },
   input: {
     flex: 1,
@@ -824,8 +770,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   sendButtonDisabled: {
     opacity: 0.25,
@@ -834,16 +780,16 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 22,
     lineHeight: 24,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   disclosure: {
     marginTop: spacing.xs,
     color: colors.textMuted,
     fontSize: 9,
     lineHeight: 13,
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   pressed: {
     opacity: 0.7,
@@ -851,8 +797,9 @@ const styles = StyleSheet.create({
   missing: {
     flex: 1,
     padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
   },
   missingSymbol: {
     color: colors.accent,
@@ -864,14 +811,14 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   missingBody: {
-    maxWidth: 280,
+    maxWidth: 290,
     marginTop: spacing.sm,
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

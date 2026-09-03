@@ -36,18 +36,6 @@ export type Connection = {
   connectedAtLabel: string;
 };
 
-export type SparkMessage = {
-  id: string;
-  connectionId: string;
-  body: string;
-  createdAtLabel: string;
-};
-
-export type SparkConversation = {
-  connectionId: string;
-  messages: SparkMessage[];
-};
-
 export type DatePlan = {
   id: string;
   connectionId: string;
@@ -92,7 +80,6 @@ type DiscoveryContextValue = {
   introductions: DatingProfile[];
   currentProfile: DatingProfile | null;
   connections: Connection[];
-  sparkConversations: SparkConversation[];
   datePlans: DatePlan[];
   isLoadingDiscovery: boolean;
   isLoadingConnections: boolean;
@@ -105,8 +92,6 @@ type DiscoveryContextValue = {
   passCurrentProfile: () => Promise<void>;
   clearLastMatchedConnection: () => void;
   getConnection: (connectionId: string) => Connection | null;
-  getSparkMessages: (connectionId: string) => SparkMessage[];
-  addSparkMessage: (connectionId: string, body: string) => void;
   createDatePlan: (
     connectionId: string,
     day: string,
@@ -246,10 +231,6 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
   const [introductions, setIntroductions] = useState<DatingProfile[]>([]);
 
   const [connections, setConnections] = useState<Connection[]>([]);
-
-  const [sparkConversations, setSparkConversations] = useState<
-    SparkConversation[]
-  >([]);
 
   const [datePlans, setDatePlans] = useState<DatePlan[]>([]);
 
@@ -405,63 +386,6 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
     [connections],
   );
 
-  /*
-   * Build 23B deliberately leaves Spark messages
-   * and date planning local. Their production
-   * persistence belongs to subsequent server-backed
-   * phases. Connections themselves are authoritative.
-   */
-  const getSparkMessages = useCallback(
-    (connectionId: string) =>
-      sparkConversations.find(
-        (conversation) => conversation.connectionId === connectionId,
-      )?.messages ?? [],
-    [sparkConversations],
-  );
-
-  const addSparkMessage = useCallback(
-    (connectionId: string, body: string) => {
-      const trimmedBody = body.trim();
-
-      if (!trimmedBody || !getConnection(connectionId)) {
-        return;
-      }
-
-      const message: SparkMessage = {
-        id: `spark-${connectionId}-${Date.now()}`,
-        connectionId,
-        body: trimmedBody,
-        createdAtLabel: "Just now",
-      };
-
-      setSparkConversations((current) => {
-        const existing = current.find(
-          (conversation) => conversation.connectionId === connectionId,
-        );
-
-        if (!existing) {
-          return [
-            ...current,
-            {
-              connectionId,
-              messages: [message],
-            },
-          ];
-        }
-
-        return current.map((conversation) =>
-          conversation.connectionId === connectionId
-            ? {
-                ...conversation,
-                messages: [...conversation.messages, message],
-              }
-            : conversation,
-        );
-      });
-    },
-    [getConnection, sparkConversations],
-  );
-
   const createDatePlan = useCallback(
     (connectionId: string, day: string, time: string, place: string) => {
       const cleanDay = day.trim();
@@ -496,7 +420,6 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       introductions,
       currentProfile,
       connections,
-      sparkConversations,
       datePlans,
       isLoadingDiscovery,
       isLoadingConnections,
@@ -509,15 +432,12 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       passCurrentProfile,
       clearLastMatchedConnection,
       getConnection,
-      getSparkMessages,
-      addSparkMessage,
       createDatePlan,
     }),
     [
       introductions,
       currentProfile,
       connections,
-      sparkConversations,
       datePlans,
       isLoadingDiscovery,
       isLoadingConnections,
@@ -530,8 +450,6 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       passCurrentProfile,
       clearLastMatchedConnection,
       getConnection,
-      getSparkMessages,
-      addSparkMessage,
       createDatePlan,
     ],
   );
