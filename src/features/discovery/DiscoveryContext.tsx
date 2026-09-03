@@ -45,6 +45,17 @@ export type DatePlan = {
   createdAtLabel: string;
 };
 
+type MemberDatePlanRow = {
+  date_plan_id: string;
+  connection_id: string;
+  created_by: string;
+  scheduled_for: string;
+  place_name: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type DiscoveryIntroductionRow = {
   member_id: string;
   first_name: string | null;
@@ -83,11 +94,14 @@ type DiscoveryContextValue = {
   datePlans: DatePlan[];
   isLoadingDiscovery: boolean;
   isLoadingConnections: boolean;
+  isLoadingDatePlans: boolean;
+  isCreatingDatePlan: boolean;
   isSubmittingDecision: boolean;
   discoveryError: string | null;
   lastMatchedConnectionId: string | null;
   refreshDiscovery: () => Promise<void>;
   refreshConnections: () => Promise<void>;
+  refreshDatePlans: () => Promise<void>;
   likeCurrentProfile: () => Promise<void>;
   passCurrentProfile: () => Promise<void>;
   clearLastMatchedConnection: () => void;
@@ -97,7 +111,7 @@ type DiscoveryContextValue = {
     day: string,
     time: string,
     place: string,
-  ) => void;
+  ) => Promise<DatePlan | null>;
 };
 
 const DiscoveryContext = createContext<DiscoveryContextValue | null>(null);
@@ -210,6 +224,46 @@ function connectedAtLabel(value: string | null) {
   })}`;
 }
 
+function datePlanFromRow(row: MemberDatePlanRow): DatePlan {
+  const scheduled = new Date(row.scheduled_for);
+
+  return {
+    id: row.date_plan_id,
+    connectionId: row.connection_id,
+    day: Number.isNaN(scheduled.getTime())
+      ? "Date planned"
+      : scheduled.toLocaleDateString(undefined, {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        }),
+    time: Number.isNaN(scheduled.getTime())
+      ? ""
+      : scheduled.toLocaleTimeString(undefined, {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+    place: row.place_name.trim(),
+    createdAtLabel: "Saved",
+  };
+}
+
+function parseDateInput(day: string, time: string) {
+  const direct = new Date(`${day} ${time}`);
+
+  if (!Number.isNaN(direct.getTime())) {
+    return direct;
+  }
+
+  const isoLike = new Date(`${day}T${time}`);
+
+  if (!Number.isNaN(isoLike.getTime())) {
+    return isoLike;
+  }
+
+  return null;
+}
+
 function errorMessage(error: unknown) {
   if (
     typeof error === "object" &&
@@ -237,6 +291,8 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
   const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(true);
 
   const [isLoadingConnections, setIsLoadingConnections] = useState(true);
+  const [isLoadingDatePlans, setIsLoadingDatePlans] = useState(true);
+  const [isCreatingDatePlan, setIsCreatingDatePlan] = useState(false);
 
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
@@ -317,9 +373,38 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
     }
   }, []);
 
+  const refreshDatePlans = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setDatePlans([]);
+      setIsLoadingDatePlans(false);
+      return;
+    }
+
+    setIsLoadingDatePlans(true);
+
+    try {
+      const { data, error } = await supabase.rpc("get_member_date_plans");
+
+      if (error) {
+        throw error;
+      }
+
+      const rows = (data ?? []) as MemberDatePlanRow[];
+      setDatePlans(rows.map(datePlanFromRow));
+    } catch (error) {
+      setDiscoveryError(errorMessage(error));
+    } finally {
+      setIsLoadingDatePlans(false);
+    }
+  }, []);
+
   useEffect(() => {
-    void Promise.all([refreshDiscovery(), refreshConnections()]);
-  }, [refreshConnections, refreshDiscovery]);
+    void Promise.all([
+      refreshDiscovery(),
+      refreshConnections(),
+      refreshDatePlans(),
+    ]);
+  }, [refreshConnections, refreshDatePlans, refreshDiscovery]);
 
   const submitDecision = useCallback(
     async (profile: DatingProfile, decision: "like" | "pass") => {
@@ -387,32 +472,78 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
   );
 
   const createDatePlan = useCallback(
-    (connectionId: string, day: string, time: string, place: string) => {
+    async (
+      connectionId: string,
+      day: string,
+      time: string,
+      place: string,
+    ): Promise<DatePlan | null> => {
+      const cleanConnectionId = connectionId.trim();
       const cleanDay = day.trim();
       const cleanTime = time.trim();
       const cleanPlace = place.trim();
 
       if (
-        !getConnection(connectionId) ||
+        !isSupabaseConfigured ||
+        !getConnection(cleanConnectionId) ||
         !cleanDay ||
         !cleanTime ||
-        !cleanPlace
+        !cleanPlace ||
+        isCreatingDatePlan
       ) {
-        return;
+        return null;
       }
 
-      const plan: DatePlan = {
-        id: `date-${connectionId}-${Date.now()}`,
-        connectionId,
-        day: cleanDay,
-        time: cleanTime,
-        place: cleanPlace,
-        createdAtLabel: "Planned locally",
-      };
+      const scheduledFor = parseDateInput(cleanDay, cleanTime);
 
-      setDatePlans((current) => [plan, ...current]);
+      if (!scheduledFor) {
+        setDiscoveryError("Choose a valid date and time.");
+        return null;
+      }
+
+      setIsCreatingDatePlan(true);
+      setDiscoveryError(null);
+
+      try {
+        const { data, error } = await supabase.rpc("create_member_date_plan", {
+          p_connection_id: cleanConnectionId,
+          p_scheduled_for: scheduledFor.toISOString(),
+          p_place_name: cleanPlace,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const createdId = typeof data === "string" ? data : null;
+
+        const { data: rows, error: readError } = await supabase.rpc(
+          "get_member_date_plans",
+        );
+
+        if (readError) {
+          throw readError;
+        }
+
+        const mappedRows = ((rows ?? []) as MemberDatePlanRow[]).map(
+          datePlanFromRow,
+        );
+
+        setDatePlans(mappedRows);
+
+        if (!createdId) {
+          return null;
+        }
+
+        return mappedRows.find((plan) => plan.id === createdId) ?? null;
+      } catch (error) {
+        setDiscoveryError(errorMessage(error));
+        return null;
+      } finally {
+        setIsCreatingDatePlan(false);
+      }
     },
-    [getConnection],
+    [getConnection, isCreatingDatePlan],
   );
 
   const value = useMemo(
@@ -423,11 +554,14 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       datePlans,
       isLoadingDiscovery,
       isLoadingConnections,
+      isLoadingDatePlans,
+      isCreatingDatePlan,
       isSubmittingDecision,
       discoveryError,
       lastMatchedConnectionId,
       refreshDiscovery,
       refreshConnections,
+      refreshDatePlans,
       likeCurrentProfile,
       passCurrentProfile,
       clearLastMatchedConnection,
@@ -441,11 +575,14 @@ export function DiscoveryProvider({ children }: DiscoveryProviderProps) {
       datePlans,
       isLoadingDiscovery,
       isLoadingConnections,
+      isLoadingDatePlans,
+      isCreatingDatePlan,
       isSubmittingDecision,
       discoveryError,
       lastMatchedConnectionId,
       refreshDiscovery,
       refreshConnections,
+      refreshDatePlans,
       likeCurrentProfile,
       passCurrentProfile,
       clearLastMatchedConnection,

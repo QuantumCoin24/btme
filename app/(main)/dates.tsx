@@ -1,63 +1,35 @@
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  useRouter,
-} from 'expo-router';
-import {
-  AppShellScreen,
-} from '../../src/components/AppShellScreen';
-import {
-  useDiscovery,
-} from '../../src/features/discovery/DiscoveryContext';
-import {
-  useFeedback,
-} from '../../src/features/feedback/FeedbackContext';
-import {
-  colors,
-  radius,
-  spacing,
-} from '../../src/theme/tokens';
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { AppShellScreen } from "../../src/components/AppShellScreen";
+import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
+import { useFeedback } from "../../src/features/feedback/FeedbackContext";
+import { colors, radius, spacing } from "../../src/theme/tokens";
 
 export default function DatesScreen() {
   const router = useRouter();
 
-  const {
-    datePlans,
-    getConnection,
-  } = useDiscovery();
-  const {
-    getReflectionForDatePlan,
-  } = useFeedback();
+  const { datePlans, getConnection } = useDiscovery();
+  const { getReflectionForDatePlan } = useFeedback();
 
   return (
     <AppShellScreen
       eyebrow="DATES"
       title="From chemistry to real life."
-      body="Keep the dates you want to remember in one place while the production planning and safety systems are built."
+      body="Your plans, your matches and SafeDate™ in one place."
     >
       {datePlans.length > 0 ? (
         <View style={styles.list}>
           {datePlans.map((plan) => {
-            const connection = getConnection(
-              plan.connectionId,
-            );
+            const connection = getConnection(plan.connectionId);
 
             if (!connection) {
               return null;
             }
 
-            const reflection =
-              getReflectionForDatePlan(plan.id);
+            const reflection = getReflectionForDatePlan(plan.id);
 
             return (
-              <View
-                key={plan.id}
-                style={styles.dateCard}
-              >
+              <View key={plan.id} style={styles.dateCard}>
                 <View style={styles.cardTop}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
@@ -71,49 +43,34 @@ export default function DatesScreen() {
                     </Text>
 
                     <Text style={styles.compatibility}>
-                      {connection.profile.compatibility}%
-                      {' compatibility'}
+                      {connection.profile.compatibility}%{" compatibility"}
                     </Text>
                   </View>
 
                   <View style={styles.localBadge}>
-                    <Text style={styles.localBadgeText}>
-                      PLANNED
-                    </Text>
+                    <Text style={styles.localBadgeText}>PLANNED</Text>
                   </View>
                 </View>
 
                 <View style={styles.dateDetails}>
                   <View style={styles.detail}>
-                    <Text style={styles.detailLabel}>
-                      WHEN
-                    </Text>
+                    <Text style={styles.detailLabel}>WHEN</Text>
 
-                    <Text style={styles.detailValue}>
-                      {plan.day}
-                    </Text>
+                    <Text style={styles.detailValue}>{plan.day}</Text>
 
-                    <Text style={styles.detailSecondary}>
-                      {plan.time}
-                    </Text>
+                    <Text style={styles.detailSecondary}>{plan.time}</Text>
                   </View>
 
                   <View style={styles.divider} />
 
                   <View style={styles.detail}>
-                    <Text style={styles.detailLabel}>
-                      WHERE
-                    </Text>
+                    <Text style={styles.detailLabel}>WHERE</Text>
 
-                    <Text style={styles.detailValue}>
-                      {plan.place}
-                    </Text>
+                    <Text style={styles.detailValue}>{plan.place}</Text>
                   </View>
                 </View>
 
-                <Text style={styles.localDisclosure}>
-                  LOCAL PLAN · NOT SENT OR ACCEPTED
-                </Text>
+                <Text style={styles.localDisclosure}>PRODUCTION DATE PLAN</Text>
 
                 {reflection && (
                   <View style={styles.reflectionStatus}>
@@ -125,7 +82,7 @@ export default function DatesScreen() {
                       </Text>
 
                       <Text style={styles.reflectionBody}>
-                        Local only · not shared with {' '}
+                        Local only · not shared with{" "}
                         {connection.profile.firstName}
                       </Text>
                     </View>
@@ -134,25 +91,14 @@ export default function DatesScreen() {
 
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Open SafeDate preview for ${connection.profile.firstName}`}
-                  onPress={() =>
-                    router.push(
-                      `/safedate/${plan.id}` as never,
-                    )
-                  }
+                  accessibilityLabel={`Open SafeDate for ${connection.profile.firstName}`}
+                  onPress={() => router.push(`/safedate/${plan.id}` as never)}
                   style={({ pressed }) => [
                     styles.safeDateButton,
-                    pressed &&
-                      styles.safeDateButtonPressed,
+                    pressed && styles.safeDateButtonPressed,
                   ]}
                 >
-                  <Text
-                    style={
-                      styles.safeDateButtonText
-                    }
-                  >
-                    Open SafeDate™ preview
-                  </Text>
+                  <Text style={styles.safeDateButtonText}>Open SafeDate™</Text>
                 </Pressable>
               </View>
             );
@@ -160,42 +106,36 @@ export default function DatesScreen() {
         </View>
       ) : (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptySymbol}>
-            ◇
-          </Text>
+          <Text style={styles.emptySymbol}>◇</Text>
 
           <Text style={styles.emptyTitle}>
             Make plans worth showing up for.
           </Text>
 
           <Text style={styles.emptyBody}>
-            When you create a local date plan from Spark™,
-            it will appear here.
+            When you create a date plan from Spark™, it will appear here.
           </Text>
         </View>
       )}
 
       <View style={styles.safeDateCard}>
-        <Text style={styles.safeDateEyebrow}>
-          SAFEDATE™
-        </Text>
+        <Text style={styles.safeDateEyebrow}>SAFEDATE™</Text>
 
         <Text style={styles.safeDateTitle}>
           Safety without killing the vibe.
         </Text>
 
         <Text style={styles.safeDateBody}>
-          SafeDate™ is the next protected layer for
-          in-person dates. Its production safety,
-          location and escalation systems are not
-          active in this preview.
+          SafeDate™ is the next protected layer for in-person dates. Its
+          production safety, location and escalation systems are not active in
+          this preview.
         </Text>
 
         <View style={styles.safeDateStatus}>
           <View style={styles.dot} />
 
           <Text style={styles.safeDateStatusText}>
-            SAFETY SYSTEMS COMING LATER
+            TWO-SIDED SAFETY STATE ACTIVE
           </Text>
         </View>
       </View>
@@ -218,8 +158,8 @@ const styles = StyleSheet.create({
   },
 
   cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   avatar: {
@@ -227,15 +167,15 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatarText: {
     color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 22,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 
   identity: {
@@ -247,7 +187,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 23,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 
   compatibility: {
@@ -255,7 +195,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 10,
     lineHeight: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   localBadge: {
@@ -269,7 +209,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 8,
     lineHeight: 11,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1,
   },
 
@@ -288,7 +228,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 9,
     lineHeight: 12,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.3,
   },
 
@@ -296,7 +236,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 16,
     lineHeight: 22,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
   detailSecondary: {
@@ -316,9 +256,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 8,
     lineHeight: 12,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.6,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   safeDateButton: {
@@ -327,8 +267,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
     backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   safeDateButtonPressed: {
     opacity: 0.72,
@@ -337,7 +277,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 14,
     lineHeight: 19,
-    fontWeight: '900',
+    fontWeight: "900",
   },
   emptyCard: {
     minHeight: 250,
@@ -347,8 +287,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   emptySymbol: {
@@ -362,8 +302,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 20,
     lineHeight: 26,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: "900",
+    textAlign: "center",
   },
 
   emptyBody: {
@@ -372,7 +312,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   reflectionStatus: {
@@ -380,8 +320,8 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceElevated,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
 
   reflectionDot: {
@@ -401,7 +341,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 12,
     lineHeight: 17,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 
   reflectionBody: {
@@ -425,7 +365,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 11,
     lineHeight: 15,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.8,
   },
 
@@ -434,7 +374,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 23,
     lineHeight: 29,
-    fontWeight: '900',
+    fontWeight: "900",
   },
 
   safeDateBody: {
@@ -446,8 +386,8 @@ const styles = StyleSheet.create({
 
   safeDateStatus: {
     marginTop: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
 
@@ -462,7 +402,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 9,
     lineHeight: 13,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1,
   },
 });

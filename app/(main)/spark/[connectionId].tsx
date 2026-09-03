@@ -134,12 +134,21 @@ export default function SparkScreen() {
     dateTime.trim().length > 0 &&
     datePlace.trim().length > 0;
 
-  function handleSaveDate() {
+  async function handleSaveDate() {
     if (!canSaveDate) {
       return;
     }
 
-    createDatePlan(resolvedConnectionId, dateDay, dateTime, datePlace);
+    const createdPlan = await createDatePlan(
+      resolvedConnectionId,
+      dateDay,
+      dateTime,
+      datePlace,
+    );
+
+    if (!createdPlan) {
+      return;
+    }
 
     setDatePlanSaved(true);
     setPlanningDate(false);
@@ -381,7 +390,7 @@ export default function SparkScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Save date plan"
                 disabled={!canSaveDate}
-                onPress={handleSaveDate}
+                onPress={() => void handleSaveDate()}
                 style={({ pressed }) => [
                   styles.primaryButton,
                   !canSaveDate && styles.primaryButtonDisabled,
