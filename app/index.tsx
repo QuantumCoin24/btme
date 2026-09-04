@@ -10,6 +10,7 @@ import {
 import {
   useRouter,
 } from 'expo-router';
+
 import {
   BrandMark,
 } from '../src/components/BrandMark';
@@ -20,8 +21,8 @@ import {
   useAuth,
 } from '../src/features/auth/AuthContext';
 import {
-  supabase,
-} from '../src/lib/supabase';
+  useMembership,
+} from '../src/features/membership/MembershipContext';
 import {
   colors,
   spacing,
@@ -37,8 +38,17 @@ export default function SplashScreen() {
     user,
   } = useAuth();
 
-  const [minimumSplashElapsed, setMinimumSplashElapsed] =
-    useState(false);
+  const {
+    accessState,
+    loading: accessLoading,
+    error: accessError,
+    refreshMembership,
+  } = useMembership();
+
+  const [
+    minimumSplashElapsed,
+    setMinimumSplashElapsed,
+  ] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -49,60 +59,42 @@ export default function SplashScreen() {
   }, []);
 
   useEffect(() => {
-    if (!initialized || !minimumSplashElapsed) {
+    if (
+      !initialized ||
+      !minimumSplashElapsed
+    ) {
       return;
     }
 
-    let active = true;
+    if (!configured || !user) {
+      router.replace('/welcome');
+      return;
+    }
 
-    const resolveStartupRoute = async () => {
-      if (!configured || !user) {
-        if (active) {
-          router.replace('/welcome');
-        }
+    if (accessLoading) {
+      return;
+    }
 
-        return;
-      }
+    if (accessError || !accessState) {
+      return;
+    }
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from('profiles')
-        .select('profile_complete')
-        .eq('member_id', user.id)
-        .maybeSingle();
-
-      if (!active) {
-        return;
-      }
-
-      if (error) {
-        console.warn(
-          '[BTME] Unable to resolve member startup state:',
-          error.message,
-        );
-
-        return;
-      }
-
-      if (data?.profile_complete === true) {
-        router.replace('/(main)/discover' as never);
-        return;
-      }
-
+    if (!accessState.profileComplete) {
       router.replace('/birthday');
-    };
+      return;
+    }
 
-    void resolveStartupRoute();
-
-    return () => {
-      active = false;
-    };
+    router.replace(
+      '/(main)/discover' as never,
+    );
   }, [
+    accessError,
+    accessLoading,
+    accessState,
     configured,
     initialized,
     minimumSplashElapsed,
+    refreshMembership,
     router,
     user,
   ]);

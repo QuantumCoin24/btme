@@ -18,17 +18,18 @@ import {
   spacing,
 } from '../../src/theme/tokens';
 
-const membershipLabels = {
-  monthly: 'Monthly',
-  'six-month': '6 Months',
-  annual: 'Annual',
-} as const;
-
 export default function SettingsScreen() {
   const router = useRouter();
 
   const {
-    selectedPlan,
+    accessState,
+    loading: membershipLoading,
+    error: membershipError,
+    hasActiveMembership,
+    isVerified,
+    canDate,
+    accessMessage,
+    refreshMembership,
   } = useMembership();
 
   return (
@@ -98,20 +99,56 @@ export default function SettingsScreen() {
           </Text>
 
           <Text style={styles.cardTitle}>
-            {selectedPlan
-              ? `${membershipLabels[selectedPlan]} preference`
-              : 'No plan selected'}
+            {membershipLoading
+              ? 'Checking membership…'
+              : hasActiveMembership
+                ? 'BTME Premium active'
+                : 'Premium membership required'}
           </Text>
 
           <Text style={styles.cardBody}>
-            Membership remains local preview state.
-            No purchase or active entitlement is
-            represented here.
+            {membershipLoading
+              ? 'BTME is securely checking your membership status.'
+              : hasActiveMembership
+                ? `Your ${accessState?.entitlementTier ?? 'premium'} entitlement is active and server verified.`
+                : accessMessage}
           </Text>
 
           <Text style={styles.disclosure}>
-            NO PURCHASE · NO ACTIVE ENTITLEMENT
+            {hasActiveMembership
+              ? `PREMIUM · ${(accessState?.entitlementStatus ?? 'active').toUpperCase()}`
+              : 'NO ACTIVE PREMIUM ENTITLEMENT'}
           </Text>
+
+          {membershipError ? (
+            <Text style={styles.cardBody}>
+              {membershipError}
+            </Text>
+          ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              hasActiveMembership
+                ? 'Refresh membership'
+                : 'Choose membership'
+            }
+            onPress={() => {
+              if (hasActiveMembership) {
+                void refreshMembership();
+                return;
+              }
+
+              router.push('/choose-membership' as never);
+            }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>
+              {hasActiveMembership
+                ? 'Refresh membership'
+                : 'Choose membership'}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.card}>
@@ -149,8 +186,7 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={styles.footer}>
-          SETTINGS FOUNDATION · NO SERVER ACCOUNT
-          CHANGES
+          BTME™ ACCOUNT & SAFETY CONTROLS
         </Text>
       </ScrollView>
     </View>

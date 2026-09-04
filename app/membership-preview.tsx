@@ -31,13 +31,13 @@ export default function MembershipPreviewScreen() {
       <View style={styles.content}>
         <BrandMark compact />
 
-        <Text style={styles.eyebrow}>MEMBERSHIP PREVIEW</Text>
+        <Text style={styles.eyebrow}>BTME PREMIUM</Text>
 
         <Text style={styles.title}>You’re ready for better.</Text>
 
         <Text style={styles.body}>
-          Your profile foundation and membership preference are ready for the
-          next phase.
+          Your profile is ready. Your membership access below comes from
+          BTME’s server-authoritative entitlement state.
         </Text>
 
         <View style={styles.card}>
@@ -48,23 +48,25 @@ export default function MembershipPreviewScreen() {
           <View style={styles.divider} />
 
           <Text style={styles.cardTitle}>
-            Your selected billing period is a preference until a trusted store
-            purchase is verified.
+            {hasActiveMembership
+              ? "Your Premium entitlement is active."
+              : "Choose a billing period and complete your purchase through Apple."}
           </Text>
 
           <Text style={styles.cardBody}>
-            This build records only the local plan selection for UX development.
-            It does not activate membership, charge the user or create a
-            subscription.
+            A selected billing period does not grant access by itself.
+            BTME activates Premium only after the Apple entitlement is
+            successfully verified.
           </Text>
         </View>
 
         <View style={styles.next}>
-          <Text style={styles.nextTitle}>What comes next</Text>
+          <Text style={styles.nextTitle}>Dating access</Text>
 
           <Text style={styles.nextBody}>
-            Trusted entitlement status state and the main BTME experience will
-            be connected in later builds.
+            {canDate
+              ? "Your account currently meets BTME’s verified Premium dating-access requirements."
+              : accessMessage}
           </Text>
         </View>
       </View>

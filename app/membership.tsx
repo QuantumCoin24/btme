@@ -36,7 +36,7 @@ const benefits = [
   },
   {
     title: 'Safer dates',
-    body: 'SafeDate™ will support first-date safety as the platform develops.',
+    body: 'SafeDate™ provides server-backed, independent two-person safety state for first dates.',
   },
 ] as const;
 
@@ -106,8 +106,9 @@ export default function MembershipScreen() {
         </View>
 
         <Text style={styles.note}>
-          Membership purchasing is not connected
-          in this build.
+          Membership is purchased securely through Apple.
+          Your dating access activates only after BTME
+          verifies the entitlement.
         </Text>
       </View>
     </OnboardingScreen>

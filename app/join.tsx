@@ -134,14 +134,14 @@ export default function JoinScreen() {
 
         <View style={styles.methodRow}>
           <ChoicePill
-            label="Phone"
-            selected={
-              contactMethod === 'phone'
-            }
+            label="Phone · coming soon"
+            selected={false}
             onPress={() => {
-              setContactMethod('phone');
+              setContactMethod('email');
               setContact('');
-              setError(null);
+              setError(
+                'Phone verification is not available yet. Use email to continue.',
+              );
             }}
           />
 
@@ -186,11 +186,11 @@ export default function JoinScreen() {
           We’ll send you a one-time code to verify your account.
         </Text>
 
-        {contactMethod === 'phone' ? (
-          <Text style={styles.phoneNote}>
-            SMS verification requires BTME phone delivery to be enabled.
-          </Text>
-        ) : null}
+        <Text style={styles.phoneNote}>
+          Email verification is currently available.
+          Phone verification will be enabled when BTME’s SMS delivery
+          service is live.
+        </Text>
 
         {error ? (
           <Text

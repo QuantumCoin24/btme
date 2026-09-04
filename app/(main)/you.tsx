@@ -5,20 +5,23 @@ import {
   View,
 } from 'react-native';
 import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+import {
   useRouter,
 } from 'expo-router';
 import {
   AppShellScreen,
 } from '../../src/components/AppShellScreen';
 import {
-  useCompatibility,
-} from '../../src/features/compatibility/CompatibilityContext';
+  loadMyMemberProfile,
+  MemberProfileProjection,
+} from '../../src/features/member/memberProfile';
 import {
   useMembership,
 } from '../../src/features/membership/MembershipContext';
-import {
-  useOnboarding,
-} from '../../src/features/onboarding/OnboardingContext';
 import {
   useProfile,
 } from '../../src/features/profile/ProfileContext';
@@ -62,41 +65,103 @@ const lifestyleLabels = {
   family: 'Family',
 } as const;
 
-const membershipLabels = {
-  monthly: 'Monthly',
-  'six-month': '6 Months',
-  annual: 'Annual',
-} as const;
-
 export default function YouScreen() {
   const router = useRouter();
 
   const {
-    firstName,
-    city,
-    distance,
-  } = useOnboarding();
-
-  const {
     heroPhotoReady,
     additionalPhotoCount,
-    relationshipIntent,
-    matchPreference,
-    minimumAge,
-    maximumAge,
   } = useProfile();
 
-  const {
-    lifestyleSignals,
-    perfectSunday,
-    greenFlag,
-    absoluteNo,
-    chemistryStyle,
-    dealBreakers,
-  } = useCompatibility();
+  const [
+    memberProfile,
+    setMemberProfile,
+  ] = useState<MemberProfileProjection | null>(
+    null,
+  );
+
+  const [
+    memberProfileLoading,
+    setMemberProfileLoading,
+  ] = useState(true);
+
+  const [
+    memberProfileError,
+    setMemberProfileError,
+  ] = useState<string | null>(null);
+
+  const refreshMemberProfile =
+    useCallback(async () => {
+      setMemberProfileLoading(true);
+      setMemberProfileError(null);
+
+      try {
+        const profile =
+          await loadMyMemberProfile();
+
+        setMemberProfile(profile);
+      } catch (caught) {
+        setMemberProfileError(
+          caught instanceof Error
+            ? caught.message
+            : 'BTME could not load your profile.',
+        );
+      } finally {
+        setMemberProfileLoading(false);
+      }
+    }, []);
+
+  useEffect(() => {
+    void refreshMemberProfile();
+  }, [refreshMemberProfile]);
+
+  const firstName =
+    memberProfile?.firstName ?? '';
+
+  const city =
+    memberProfile?.city ?? '';
+
+  const distance =
+    memberProfile?.distanceMiles ?? 25;
+
+  const relationshipIntent =
+    memberProfile?.relationshipIntent ?? null;
+
+  const matchPreference =
+    memberProfile?.matchPreference ?? null;
+
+  const minimumAge =
+    memberProfile?.minimumAge ?? 18;
+
+  const maximumAge =
+    memberProfile?.maximumAge ?? 99;
+
+  const lifestyleSignals =
+    memberProfile?.lifestyleSignals ?? [];
+
+  const perfectSunday =
+    memberProfile?.perfectSunday ?? '';
+
+  const greenFlag =
+    memberProfile?.greenFlag ?? '';
+
+  const absoluteNo =
+    memberProfile?.absoluteNo ?? '';
+
+  const chemistryStyle =
+    memberProfile?.chemistryStyle ?? null;
+
+  const dealBreakers =
+    memberProfile?.dealBreakers ?? [];
 
   const {
-    selectedPlan,
+    accessState,
+    profileComplete,
+    loading: membershipLoading,
+    hasActiveMembership,
+    isVerified,
+    canDate,
+    accessMessage,
   } = useMembership();
   const {
     status: verificationStatus,
@@ -146,23 +211,8 @@ export default function YouScreen() {
     (heroPhotoReady ? 1 : 0) +
     additionalPhotoCount;
 
-  const completedSignals = [
-    Boolean(firstName.trim()),
-    Boolean(city.trim()),
-    heroPhotoReady,
-    Boolean(relationshipIntent),
-    Boolean(matchPreference),
-    lifestyleSignals.length > 0,
-    Boolean(perfectSunday.trim()),
-    Boolean(greenFlag.trim()),
-    Boolean(absoluteNo.trim()),
-    Boolean(chemistryStyle),
-    dealBreakers.length > 0,
-  ].filter(Boolean).length;
-
-  const completion = Math.round(
-    (completedSignals / 11) * 100,
-  );
+  const completion =
+    profileComplete ? 100 : 0;
 
   const lifestyleText =
     lifestyleSignals.length > 0
@@ -181,6 +231,41 @@ export default function YouScreen() {
       }
       body="The profile behind your introductions — what you want, how you connect and the things that matter to you."
     >
+      {memberProfileLoading ? (
+        <View style={styles.profileStateCard}>
+          <Text style={styles.profileStateTitle}>
+            Loading your profile…
+          </Text>
+          <Text style={styles.profileStateBody}>
+            BTME is loading your saved profile.
+          </Text>
+        </View>
+      ) : memberProfileError ? (
+        <View style={styles.profileStateCard}>
+          <Text style={styles.profileStateTitle}>
+            Profile unavailable
+          </Text>
+          <Text style={styles.profileStateBody}>
+            {memberProfileError}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Retry profile"
+            onPress={() => {
+              void refreshMemberProfile();
+            }}
+            style={({ pressed }) => [
+              styles.profileRetry,
+              pressed && styles.manageCardPressed,
+            ]}
+          >
+            <Text style={styles.profileRetryText}>
+              Try again
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={styles.heroCard}>
         <View style={styles.heroTop}>
           <View style={styles.avatar}>
@@ -396,27 +481,33 @@ export default function YouScreen() {
         <View style={styles.membershipTop}>
           <View>
             <Text style={styles.membershipTitle}>
-              {selectedPlan
-                ? `${membershipLabels[selectedPlan]} plan`
-                : 'No plan selected'}
+              {membershipLoading
+                ? 'Checking Premium…'
+                : hasActiveMembership
+                  ? 'BTME Premium'
+                  : 'Premium required'}
             </Text>
 
             <Text style={styles.membershipBody}>
-              {selectedPlan
-                ? 'Saved as your local membership preference.'
-                : 'Choose a membership plan during the membership preview.'}
+              {membershipLoading
+                ? 'Checking your server-authoritative membership state.'
+                : hasActiveMembership
+                  ? 'Your Premium entitlement is active and verified.'
+                  : accessMessage}
             </Text>
           </View>
 
           <View style={styles.localPill}>
             <Text style={styles.localPillText}>
-              LOCAL
+              {hasActiveMembership ? 'ACTIVE' : 'LOCKED'}
             </Text>
           </View>
         </View>
 
         <Text style={styles.membershipDisclosure}>
-          NO PURCHASE · NO ACTIVE ENTITLEMENT
+          {canDate
+            ? 'VERIFIED · PREMIUM · READY TO DATE'
+            : `${(accessState?.entitlementStatus ?? 'inactive').toUpperCase()} · ${isVerified ? 'VERIFIED' : 'VERIFICATION REQUIRED'}`}
         </Text>
       </View>
 
@@ -489,6 +580,39 @@ function Divider() {
 }
 
 const styles = StyleSheet.create({
+  profileStateCard: {
+    marginTop: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+  },
+  profileStateTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  profileStateBody: {
+    marginTop: spacing.sm,
+    color: colors.textMuted,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  profileRetry: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  profileRetryText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
   heroCard: {
     marginTop: spacing.xl,
     borderWidth: 1,

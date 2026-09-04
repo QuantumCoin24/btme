@@ -126,9 +126,10 @@ export default function DatesScreen() {
         </Text>
 
         <Text style={styles.safeDateBody}>
-          SafeDate™ is the next protected layer for in-person dates. Its
-          production safety, location and escalation systems are not active in
-          this preview.
+          SafeDate™ uses server-backed two-person state with independent
+          end control. GPS sharing, trusted-contact alerts, background
+          monitoring and emergency-service integration are not currently
+          provided.
         </Text>
 
         <View style={styles.safeDateStatus}>

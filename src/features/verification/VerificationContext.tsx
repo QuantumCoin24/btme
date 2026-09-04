@@ -3,17 +3,12 @@ import {
   type PropsWithChildren,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
 } from 'react';
 
 import {
-  useAuth,
-} from '../auth/AuthContext';
-import {
-  supabase,
-} from '../../lib/supabase';
+  useMembership,
+} from '../membership/MembershipContext';
 
 export type VerificationStatus =
   | 'not_started'
@@ -21,12 +16,6 @@ export type VerificationStatus =
   | 'verified'
   | 'failed'
   | 'needs_review';
-
-type VerificationRecord = {
-  status: VerificationStatus;
-  verified_at: string | null;
-  submitted_at: string | null;
-};
 
 type VerificationContextValue = {
   status: VerificationStatus;
@@ -38,136 +27,66 @@ type VerificationContextValue = {
 };
 
 const VerificationContext =
-  createContext<VerificationContextValue | null>(null);
+  createContext<VerificationContextValue | null>(
+    null,
+  );
 
 export function VerificationProvider({
   children,
 }: PropsWithChildren) {
   const {
-    user,
-  } = useAuth();
-
-  const [
-    status,
-    setStatus,
-  ] = useState<VerificationStatus>('not_started');
-
-  const [
-    verifiedAt,
-    setVerifiedAt,
-  ] = useState<string | null>(null);
-
-  const [
-    submittedAt,
-    setSubmittedAt,
-  ] = useState<string | null>(null);
-
-  const [
+    accessState,
     loading,
-    setLoading,
-  ] = useState(false);
+    isVerified,
+    refreshMembership,
+  } = useMembership();
 
-  const clearVerification = useCallback(() => {
-    setStatus('not_started');
-    setVerifiedAt(null);
-    setSubmittedAt(null);
-  }, []);
+  const refreshVerification =
+    useCallback(async () => {
+      await refreshMembership();
+    }, [
+      refreshMembership,
+    ]);
 
-  const refreshVerification = useCallback(async () => {
-    if (!user) {
-      clearVerification();
-      setLoading(false);
-      return;
-    }
+  const value =
+    useMemo<VerificationContextValue>(
+      () => ({
+        status:
+          accessState?.verificationStatus ??
+          'not_started',
 
-    setLoading(true);
+        verified: isVerified,
 
-    try {
-      const {
-        data,
-        error,
-      } = await supabase
-        .from('identity_verifications')
-        .select(
-          'status, verified_at, submitted_at',
-        )
-        .eq('member_id', user.id)
-        .maybeSingle();
+        verifiedAt:
+          accessState?.verificationVerifiedAt ??
+          null,
 
-      if (error) {
-        throw error;
-      }
+        submittedAt: null,
 
-      if (!data) {
-        clearVerification();
-        return;
-      }
+        loading,
 
-      const record = data as VerificationRecord;
-
-      setStatus(record.status);
-      setVerifiedAt(record.verified_at);
-      setSubmittedAt(record.submitted_at);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    clearVerification,
-    user,
-  ]);
-
-  useEffect(() => {
-    if (!user) {
-      clearVerification();
-      setLoading(false);
-      return;
-    }
-
-    void refreshVerification().catch((error: unknown) => {
-      console.warn(
-        '[BTME] Unable to restore identity verification state:',
-        error instanceof Error
-          ? error.message
-          : String(error),
-      );
-
-      clearVerification();
-    });
-  }, [
-    clearVerification,
-    refreshVerification,
-    user,
-  ]);
-
-  const value = useMemo<VerificationContextValue>(
-    () => ({
-      status,
-      verified:
-        status === 'verified' &&
-        verifiedAt !== null,
-      verifiedAt,
-      submittedAt,
-      loading,
-      refreshVerification,
-    }),
-    [
-      loading,
-      refreshVerification,
-      status,
-      submittedAt,
-      verifiedAt,
-    ],
-  );
+        refreshVerification,
+      }),
+      [
+        accessState,
+        isVerified,
+        loading,
+        refreshVerification,
+      ],
+    );
 
   return (
-    <VerificationContext.Provider value={value}>
+    <VerificationContext.Provider
+      value={value}
+    >
       {children}
     </VerificationContext.Provider>
   );
 }
 
 export function useVerification() {
-  const value = useContext(VerificationContext);
+  const value =
+    useContext(VerificationContext);
 
   if (!value) {
     throw new Error(

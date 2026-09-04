@@ -6,24 +6,31 @@ import {
   useEffect,
   useMemo,
   useState,
-} from "react";
+} from 'react';
 
 import {
   describeAccessBlocker,
   getMyDatingAccessState,
   type MemberAccessState,
-} from "../access/memberAccess";
+} from '../access/memberAccess';
+import { useAuth } from '../auth/AuthContext';
 
-export type MembershipPlan = "monthly" | "six-month" | "annual";
+export type MembershipPlan =
+  | 'monthly'
+  | 'six-month'
+  | 'annual';
 
 type MembershipContextValue = {
   selectedPlan: MembershipPlan | null;
-  setSelectedPlan: (plan: MembershipPlan | null) => void;
+  setSelectedPlan: (
+    plan: MembershipPlan | null
+  ) => void;
 
   accessState: MemberAccessState | null;
   loading: boolean;
   error: string | null;
 
+  profileComplete: boolean;
   hasActiveMembership: boolean;
   isVerified: boolean;
   canDate: boolean;
@@ -32,86 +39,150 @@ type MembershipContextValue = {
   refreshMembership: () => Promise<void>;
 };
 
-const MembershipContext = createContext<MembershipContextValue | null>(null);
+const MembershipContext =
+  createContext<MembershipContextValue | null>(null);
 
-export function MembershipProvider({ children }: { children: ReactNode }) {
-  // This remains a UI billing-period preference only.
-  // It never grants or represents an entitlement.
-  const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(null);
+export function MembershipProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const {
+    initialized,
+    user,
+  } = useAuth();
 
-  const [accessState, setAccessState] = useState<MemberAccessState | null>(
-    null,
-  );
+  const [selectedPlan, setSelectedPlan] =
+    useState<MembershipPlan | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [accessState, setAccessState] =
+    useState<MemberAccessState | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] =
+    useState(false);
 
-  const refreshMembership = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const [error, setError] =
+    useState<string | null>(null);
 
-    try {
-      const next = await getMyDatingAccessState();
+  const refreshMembership =
+    useCallback(async () => {
+      if (!initialized || !user) {
+        setAccessState(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
 
-      setAccessState(next);
-    } catch (caught) {
-      setAccessState(null);
+      setLoading(true);
+      setError(null);
 
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "Unable to load membership access.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        const next =
+          await getMyDatingAccessState();
+
+        setAccessState(next);
+      } catch (caught) {
+        setAccessState(null);
+
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : 'Unable to load member access.',
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, [
+      initialized,
+      user?.id,
+    ]);
 
   useEffect(() => {
+    if (!initialized || !user) {
+      setAccessState(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     void refreshMembership();
-  }, [refreshMembership]);
+  }, [
+    initialized,
+    refreshMembership,
+    user?.id,
+  ]);
 
-  const value = useMemo(
-    () => ({
-      selectedPlan,
-      setSelectedPlan,
+  const profileComplete =
+    accessState?.profileComplete ?? false;
 
-      accessState,
-      loading,
-      error,
+  const hasActiveMembership =
+    accessState?.entitlementTier === 'premium' &&
+    (
+      accessState.entitlementStatus === 'active' ||
+      accessState.entitlementStatus ===
+        'grace_period'
+    ) &&
+    Boolean(accessState.entitlementVerifiedAt);
 
-      hasActiveMembership:
-        accessState?.entitlementTier === "premium" &&
-        (accessState.entitlementStatus === "active" ||
-          accessState.entitlementStatus === "grace_period") &&
-        Boolean(accessState.entitlementVerifiedAt),
+  const isVerified =
+    accessState?.verificationStatus ===
+      'verified' &&
+    Boolean(
+      accessState.verificationVerifiedAt,
+    );
 
-      isVerified:
-        accessState?.verificationStatus === "verified" &&
-        Boolean(accessState.verificationVerifiedAt),
+  const canDate =
+    accessState?.canDate ?? false;
 
-      canDate: accessState?.canDate ?? false,
+  const value =
+    useMemo<MembershipContextValue>(
+      () => ({
+        selectedPlan,
+        setSelectedPlan,
 
-      accessMessage: describeAccessBlocker(accessState),
+        accessState,
+        loading,
+        error,
 
-      refreshMembership,
-    }),
-    [accessState, error, loading, refreshMembership, selectedPlan],
-  );
+        profileComplete,
+        hasActiveMembership,
+        isVerified,
+        canDate,
+        accessMessage:
+          describeAccessBlocker(accessState),
+
+        refreshMembership,
+      }),
+      [
+        accessState,
+        canDate,
+        error,
+        hasActiveMembership,
+        isVerified,
+        loading,
+        profileComplete,
+        refreshMembership,
+        selectedPlan,
+      ],
+    );
 
   return (
-    <MembershipContext.Provider value={value}>
+    <MembershipContext.Provider
+      value={value}
+    >
       {children}
     </MembershipContext.Provider>
   );
 }
 
 export function useMembership() {
-  const context = useContext(MembershipContext);
+  const context =
+    useContext(MembershipContext);
 
   if (!context) {
-    throw new Error("useMembership must be used inside MembershipProvider");
+    throw new Error(
+      'useMembership must be used inside MembershipProvider',
+    );
   }
 
   return context;

@@ -7,28 +7,31 @@ import {
   useRouter,
 } from 'expo-router';
 
-import { useAuth } from '../auth/AuthContext';
-import { useMembership } from '../membership/MembershipContext';
+import {
+  useAuth,
+} from '../auth/AuthContext';
+import {
+  useMembership,
+} from '../membership/MembershipContext';
 
-const COMPLETED_MEMBER_BLOCKED_ROUTES = new Set([
-  '/birthday',
-  '/name',
-  '/location',
-  '/verify',
-  '/liveness',
-  '/verified',
-  '/photos',
-  '/intent',
-  '/looking-for',
-  '/lifestyle',
-  '/perfect-sunday',
-  '/green-flag',
-  '/absolutely-not',
-  '/quick-chemistry',
-  '/dealbreakers',
-  '/profile-preview',
-  '/membership',
-]);
+const COMPLETED_MEMBER_BLOCKED_ROUTES =
+  new Set([
+    '/birthday',
+    '/name',
+    '/location',
+    '/verify',
+    '/liveness',
+    '/verified',
+    '/photos',
+    '/intent',
+    '/looking-for',
+    '/lifestyle',
+    '/perfect-sunday',
+    '/green-flag',
+    '/absolutely-not',
+    '/quick-chemistry',
+    '/dealbreakers',
+  ]);
 
 export function CompletedMemberRouteGuard({
   children,
@@ -42,26 +45,27 @@ export function CompletedMemberRouteGuard({
   } = useAuth();
 
   const {
-    accessState,
+    profileComplete,
     loading,
   } = useMembership();
-
-  const profileComplete =
-    accessState?.profileComplete === true;
 
   const shouldRedirect =
     initialized &&
     Boolean(user) &&
     !loading &&
     profileComplete &&
-    COMPLETED_MEMBER_BLOCKED_ROUTES.has(pathname);
+    COMPLETED_MEMBER_BLOCKED_ROUTES.has(
+      pathname,
+    );
 
   useEffect(() => {
     if (!shouldRedirect) {
       return;
     }
 
-    router.replace('/(main)/discover' as never);
+    router.replace(
+      '/(main)/discover' as never,
+    );
   }, [
     router,
     shouldRedirect,

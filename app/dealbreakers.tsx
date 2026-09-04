@@ -36,6 +36,9 @@ import {
 import {
   persistMemberOnboarding,
 } from '../src/features/member/memberPersistence';
+import {
+  useMembership,
+} from '../src/features/membership/MembershipContext';
 
 import {
   colors,
@@ -76,6 +79,10 @@ const options: Array<{
 
 export default function DealbreakersScreen() {
   const router = useRouter();
+
+  const {
+    refreshMembership,
+  } = useMembership();
 
   const {
     lifestyleSignals,
@@ -150,8 +157,10 @@ export default function DealbreakersScreen() {
       return;
     }
 
+    await refreshMembership();
+
     setSaving(false);
-    router.push('/profile-preview');
+    router.replace('/profile-preview');
   };
 
   return (

@@ -373,8 +373,8 @@ export default function SparkScreen() {
           <Text style={styles.dateTitle}>Ready to meet?</Text>
 
           <Text style={styles.dateBody}>
-            Plan the date here. Date persistence and SafeDate activation remain
-            a separate production phase.
+            Plan the date here. Your date plan is saved to BTME and can
+            open the server-backed SafeDate™ flow from Dates.
           </Text>
 
           {datePlanSaved ? (

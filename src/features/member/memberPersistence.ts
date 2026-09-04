@@ -301,7 +301,17 @@ export async function persistMemberOnboarding(
     const message =
       error instanceof Error
         ? error.message
-        : 'BTME could not save your profile.';
+        : typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof error.message === 'string'
+          ? error.message
+          : 'BTME could not save your profile.';
+
+    console.error(
+      '[BTME] complete_member_onboarding failed',
+      error,
+    );
 
     return {
       ok: false,

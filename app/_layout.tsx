@@ -21,11 +21,11 @@ import { colors } from '../src/theme/tokens';
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <MembershipProvider>
       <VerificationProvider>
       <OnboardingProvider>
       <ProfileProvider>
         <CompatibilityProvider>
-          <MembershipProvider>
       <AppleMembershipProvider>
             <DiscoveryProvider>
               <SafeDateProvider>
@@ -52,11 +52,11 @@ export default function RootLayout() {
               </SafeDateProvider>
             </DiscoveryProvider>
                 </AppleMembershipProvider>
-</MembershipProvider>
         </CompatibilityProvider>
       </ProfileProvider>
       </OnboardingProvider>
           </VerificationProvider>
+      </MembershipProvider>
     </AuthProvider>
   );
 }
