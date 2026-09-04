@@ -9,6 +9,7 @@ import { ProfileProvider } from '../src/features/profile/ProfileContext';
 import { CompatibilityProvider } from '../src/features/compatibility/CompatibilityContext';
 import { MembershipProvider } from '../src/features/membership/MembershipContext';
 import { AppleMembershipProvider } from '../src/features/membership/AppleMembershipProvider';
+import { CompletedMemberRouteGuard } from '../src/features/onboarding/CompletedMemberRouteGuard';
 import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
 import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
 import { FeedbackProvider } from '../src/features/feedback/FeedbackContext';
@@ -32,7 +33,8 @@ export default function RootLayout() {
                   <RelationshipProvider>
                     <SuccessProvider>
                       <MemberSafetyProvider>
-                        <StatusBar style="light" />
+                        <CompletedMemberRouteGuard>
+                          <StatusBar style="light" />
                   <Stack
                     screenOptions={{
                       headerShown: false,
@@ -42,6 +44,7 @@ export default function RootLayout() {
                       },
                     }}
                         />
+                        </CompletedMemberRouteGuard>
                       </MemberSafetyProvider>
                     </SuccessProvider>
                   </RelationshipProvider>

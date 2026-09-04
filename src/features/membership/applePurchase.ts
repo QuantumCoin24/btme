@@ -4,6 +4,7 @@ import {
   finishTransaction,
   getAvailablePurchases,
   initConnection,
+  ErrorCode,
   purchaseErrorListener,
   purchaseUpdatedListener,
   requestPurchase,
@@ -152,29 +153,66 @@ export async function restoreAppleMembershipPurchases() {
   const results: ApplePurchaseResult[] = [];
 
   for (const purchase of relevant) {
-    const result = await verifyAndFinishPurchase(purchase);
+    try {
+      const result = await verifyAndFinishPurchase(purchase);
 
-    if (result) {
-      results.push(result);
+      if (result) {
+        results.push(result);
+      }
+    } catch {
+      // Restore is best-effort across Apple purchase history.
+      // One expired, revoked, stale, or otherwise inactive
+      // historical transaction must not abort the full restore.
+      continue;
     }
   }
 
   return results;
 }
 
+type PurchaseCancelledHandler = () => void | Promise<void>;
+
+export function isApplePurchaseCancellation(
+  error: unknown,
+): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code ===
+      ErrorCode.UserCancelled
+  );
+}
+
 export function subscribeToAppleMembershipPurchases({
   onVerified,
   onError,
+  onCancelled,
 }: {
   onVerified: PurchaseSuccessHandler;
   onError: PurchaseFailureHandler;
+  onCancelled: PurchaseCancelledHandler;
 }) {
   requireAppleStorePlatform();
 
   let active = true;
+  const inFlightTransactionIds = new Set<string>();
 
   const purchaseSubscription = purchaseUpdatedListener(
     (purchase) => {
+      const transactionId = purchase.transactionId?.trim();
+
+      if (
+        transactionId &&
+        inFlightTransactionIds.has(transactionId)
+      ) {
+        return;
+      }
+
+      if (transactionId) {
+        inFlightTransactionIds.add(transactionId);
+      }
+
       void (async () => {
         try {
           const result =
@@ -195,6 +233,10 @@ export function subscribeToAppleMembershipPurchases({
                   "Unable to verify Apple membership.",
                 ),
           );
+        } finally {
+          if (transactionId) {
+            inFlightTransactionIds.delete(transactionId);
+          }
         }
       })();
     },
@@ -203,6 +245,11 @@ export function subscribeToAppleMembershipPurchases({
   const errorSubscription = purchaseErrorListener(
     (purchaseError) => {
       if (!active) {
+        return;
+      }
+
+      if (purchaseError.code === ErrorCode.UserCancelled) {
+        void onCancelled();
         return;
       }
 

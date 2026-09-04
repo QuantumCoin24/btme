@@ -17,6 +17,7 @@ import { useAuth } from "../auth/AuthContext";
 import {
   connectAppleMembershipStore,
   disconnectAppleMembershipStore,
+  isApplePurchaseCancellation,
   restoreAppleMembershipPurchases,
   startAppleMembershipPurchase,
   subscribeToAppleMembershipPurchases,
@@ -119,6 +120,13 @@ export function AppleMembershipProvider({
               await refreshMembership();
             },
 
+            onCancelled: async () => {
+              if (!mounted) {
+                return;
+              }
+              setPurchasing(false);
+              setPurchaseError(null);
+            },
             onError: async (error) => {
               if (!mounted) {
                 return;
@@ -183,6 +191,10 @@ export function AppleMembershipProvider({
       } catch (caught) {
         setPurchasing(false);
 
+        if (isApplePurchaseCancellation(caught)) {
+          setPurchaseError(null);
+          return;
+        }
         const error =
           caught instanceof Error
             ? caught
