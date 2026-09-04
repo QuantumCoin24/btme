@@ -7,7 +7,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "uk.betterthanmyex.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +37,8 @@
           "photosPermission": "Allow Better Than My Ex to access your photos so you can choose profile pictures.",
           "cameraPermission": false
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "scheme": "btme",
     "experiments": {

@@ -8,6 +8,7 @@ import { OnboardingProvider } from '../src/features/onboarding/OnboardingContext
 import { ProfileProvider } from '../src/features/profile/ProfileContext';
 import { CompatibilityProvider } from '../src/features/compatibility/CompatibilityContext';
 import { MembershipProvider } from '../src/features/membership/MembershipContext';
+import { AppleMembershipProvider } from '../src/features/membership/AppleMembershipProvider';
 import { DiscoveryProvider } from '../src/features/discovery/DiscoveryContext';
 import { SafeDateProvider } from '../src/features/safedate/SafeDateContext';
 import { FeedbackProvider } from '../src/features/feedback/FeedbackContext';
@@ -24,6 +25,7 @@ export default function RootLayout() {
       <ProfileProvider>
         <CompatibilityProvider>
           <MembershipProvider>
+      <AppleMembershipProvider>
             <DiscoveryProvider>
               <SafeDateProvider>
                 <FeedbackProvider>
@@ -46,7 +48,8 @@ export default function RootLayout() {
                 </FeedbackProvider>
               </SafeDateProvider>
             </DiscoveryProvider>
-          </MembershipProvider>
+                </AppleMembershipProvider>
+</MembershipProvider>
         </CompatibilityProvider>
       </ProfileProvider>
       </OnboardingProvider>
