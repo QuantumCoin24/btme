@@ -49,11 +49,19 @@ export function CompletedMemberRouteGuard({
     loading,
   } = useMembership();
 
+  const isDevVerificationRoute =
+    __DEV__ &&
+    (
+      pathname === '/liveness' ||
+      pathname === '/verified'
+    );
+
   const shouldRedirect =
     initialized &&
     Boolean(user) &&
     !loading &&
     profileComplete &&
+    !isDevVerificationRoute &&
     COMPLETED_MEMBER_BLOCKED_ROUTES.has(
       pathname,
     );

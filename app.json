@@ -30,7 +30,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Better Than My Ex to use your camera for identity and liveness verification.",
+          "cameraPermission": "Allow Better Than My Ex to use your camera for Live Selfie Verification.",
           "recordAudioAndroid": false
         }
       ],

@@ -173,19 +173,19 @@ export default function YouScreen() {
     verificationLoading
       ? {
           title: 'Checking verification.',
-          body: 'BTME™ is securely checking your identity verification status.',
+          body: 'BTME™ is securely checking your live-selfie verification status.',
           status: 'CHECKING VERIFICATION',
         }
       : identityVerified
         ? {
-            title: 'BTME Verified.',
-            body: 'Your identity verification has been confirmed by BTME™ trusted verification infrastructure.',
-            status: 'IDENTITY VERIFIED',
+            title: 'BTME Live Verified.',
+            body: 'You completed BTME™’s live-camera challenge and your verification status has been confirmed by BTME™ trusted verification infrastructure.',
+            status: 'LIVE SELFIE VERIFIED',
           }
         : verificationStatus === 'pending'
           ? {
               title: 'Verification in progress.',
-              body: 'Your identity verification has been submitted and is awaiting a trusted result.',
+              body: 'Your live-selfie verification has been submitted and is awaiting a trusted result.',
               status: 'VERIFICATION PENDING',
             }
           : verificationStatus === 'needs_review'
@@ -264,8 +264,8 @@ export default function YouScreen() {
             </Text>
           </Pressable>
         </View>
-      ) : null}
-
+      ) : (
+        <>
       <View style={styles.heroCard}>
         <View style={styles.heroTop}>
           <View style={styles.avatar}>
@@ -513,7 +513,7 @@ export default function YouScreen() {
 
       <View style={styles.trustCard}>
         <Text style={styles.trustEyebrow}>
-          IDENTITY & SAFETY
+          VERIFICATION & SAFETY
         </Text>
 
         <Text style={styles.trustTitle}>
@@ -528,7 +528,10 @@ export default function YouScreen() {
             {verificationPresentation.status}
           </Text>
         </View>
+
       </View>
+        </>
+      )}
     </AppShellScreen>
   );
 }
@@ -861,6 +864,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
   },
+
   trustEyebrow: {
     color: colors.warning,
     fontSize: 10,

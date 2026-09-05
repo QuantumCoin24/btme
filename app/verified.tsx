@@ -41,8 +41,8 @@ function presentationFor(
       eyebrow: 'BTME VERIFIED',
       title: 'You’re verified.',
       body:
-        'Your identity verification has been confirmed by BTME™ trusted verification infrastructure.',
-      status: 'IDENTITY VERIFIED',
+        'You completed BTME™’s live-camera challenge and the result was confirmed by BTME™ verification infrastructure.',
+      status: 'LIVE SELFIE VERIFIED',
       action: 'Continue →',
     };
   }
@@ -52,7 +52,7 @@ function presentationFor(
       eyebrow: 'VERIFICATION',
       title: 'Verification in progress.',
       body:
-        'Your identity verification has been submitted and is waiting for a trusted result. BTME Verified status has not been awarded yet.',
+        'Your live-selfie verification is waiting for a trusted server result. BTME Verified status has not been awarded yet.',
       status: 'VERIFICATION PENDING',
       action: 'Refresh status',
     };
@@ -84,8 +84,8 @@ function presentationFor(
     eyebrow: 'CAMERA READY',
     title: 'Camera check complete.',
     body:
-      'Your front camera is ready for the future trusted identity and liveness flow. This camera preview did not verify your identity and did not award a BTME Verified badge.',
-    status: 'IDENTITY NOT VERIFIED',
+      'Your live-selfie check has not been confirmed yet. Complete the camera challenge before BTME™ can award Live Selfie Verified status.',
+    status: 'LIVE SELFIE NOT VERIFIED',
     action: 'Continue',
   };
 }
@@ -130,7 +130,7 @@ export default function VerifiedScreen() {
       await refreshVerification();
     } catch (error) {
       console.warn(
-        '[BTME] Unable to refresh identity verification:',
+        '[BTME] Unable to refresh live-selfie verification:',
         error instanceof Error
           ? error.message
           : String(error),
@@ -178,7 +178,7 @@ export default function VerifiedScreen() {
           </View>
 
           <Text style={styles.statusBody}>
-            Only a trusted server-side verification result can award BTME Verified status. Camera access alone is never treated as identity verification.
+            Only a trusted server-side result can award BTME™ Live Selfie Verified status. It confirms completion of BTME™’s live-camera challenge, not legal identity, age or government ID.
           </Text>
         </View>
 

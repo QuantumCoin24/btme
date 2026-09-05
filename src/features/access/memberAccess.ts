@@ -94,18 +94,18 @@ export function describeAccessBlocker(state: MemberAccessState | null): string {
 
     case "verification":
       if (state.verificationStatus === "pending") {
-        return "Your identity verification is being reviewed.";
+        return "Your live-selfie verification is being reviewed.";
       }
 
       if (state.verificationStatus === "needs_review") {
-        return "Your identity verification needs review.";
+        return "Your live-selfie verification needs review.";
       }
 
       if (state.verificationStatus === "failed") {
-        return "Your identity verification was not approved.";
+        return "Your live-selfie verification was not approved.";
       }
 
-      return "Complete identity verification to enter dating.";
+      return "Complete live-selfie verification to enter dating.";
 
     case "membership":
       if (state.entitlementStatus === "expired") {
