@@ -185,3 +185,24 @@ export function safeDateProtectionErrorMessage(
     'BTME could not update your SafeDate protection.',
   );
 }
+
+export async function recordMySafeDateLocation(
+  datePlanId: string,
+  location: {
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+    capturedAt: string;
+  },
+) {
+  await invokeVoid(
+    'record_my_safe_date_location',
+    {
+      p_date_plan_id: datePlanId,
+      p_latitude: location.latitude,
+      p_longitude: location.longitude,
+      p_accuracy_metres: location.accuracy,
+      p_captured_at: location.capturedAt,
+    },
+  );
+}
