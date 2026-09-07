@@ -57,22 +57,34 @@ function requireConfiguration() {
 
 function recoverySessionFromUrl(url: string) {
   const parsed = Linking.parse(url)
-  const params = parsed.queryParams ?? {}
+  const queryParams = parsed.queryParams ?? {}
+
+  const hash =
+    url.includes('#')
+      ? url.slice(url.indexOf('#') + 1)
+      : ''
+
+  const hashParams =
+    new URLSearchParams(hash)
+
+  const getParam = (name: string) => {
+    const queryValue = queryParams[name]
+
+    if (typeof queryValue === 'string') {
+      return queryValue
+    }
+
+    return hashParams.get(name)
+  }
 
   const accessToken =
-    typeof params.access_token === 'string'
-      ? params.access_token
-      : null
+    getParam('access_token')
 
   const refreshToken =
-    typeof params.refresh_token === 'string'
-      ? params.refresh_token
-      : null
+    getParam('refresh_token')
 
   const type =
-    typeof params.type === 'string'
-      ? params.type
-      : null
+    getParam('type')
 
   if (
     type !== 'recovery' ||
