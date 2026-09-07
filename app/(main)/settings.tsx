@@ -13,6 +13,9 @@ import {
   useMembership,
 } from '../../src/features/membership/MembershipContext';
 import {
+  useAuth,
+} from '../../src/features/auth/AuthContext';
+import {
   colors,
   radius,
   spacing,
@@ -20,6 +23,7 @@ import {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { signOut } = useAuth();
 
   const {
     accessState,
@@ -166,6 +170,30 @@ export default function SettingsScreen() {
             connected during production
             infrastructure work.
           </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardEyebrow}>
+            ACCOUNT
+          </Text>
+          <Text style={styles.cardTitle}>
+            Log out of BTME
+          </Text>
+          <Text style={styles.cardBody}>
+            Sign out of this account on this device.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+            onPress={() => {
+              void signOut();
+            }}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>
+              Log out
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.dangerCard}>
