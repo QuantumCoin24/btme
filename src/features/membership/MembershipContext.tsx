@@ -5,8 +5,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
+import {
+  AppState,
+  type AppStateStatus,
+} from 'react-native';
 
 import {
   describeAccessBlocker,
@@ -106,6 +111,43 @@ export function MembershipProvider({
     }
 
     void refreshMembership();
+  }, [
+    initialized,
+    refreshMembership,
+    user?.id,
+  ]);
+
+  const appState = useRef<AppStateStatus>(
+    AppState.currentState,
+  );
+
+  useEffect(() => {
+    if (!initialized || !user) {
+      appState.current = AppState.currentState;
+      return;
+    }
+
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextAppState) => {
+        const wasInactive =
+          appState.current === 'background' ||
+          appState.current === 'inactive';
+
+        appState.current = nextAppState;
+
+        if (
+          wasInactive &&
+          nextAppState === 'active'
+        ) {
+          void refreshMembership();
+        }
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
   }, [
     initialized,
     refreshMembership,
