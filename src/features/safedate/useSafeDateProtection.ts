@@ -13,6 +13,7 @@ import {
   loadMySafeDateProtection,
   requestMySafeDateAssistance,
   safeDateProtectionErrorMessage,
+  setMySafeDateLocationConsent,
 } from './safeDateProtection';
 
 export function useSafeDateProtection(
@@ -149,6 +150,21 @@ export function useSafeDateProtection(
     [mutate],
   );
 
+  const setLocationConsent = useCallback(
+    (
+      enabled: boolean,
+      durationMinutes = 120,
+    ) =>
+      mutate((id) =>
+        setMySafeDateLocationConsent(
+          id,
+          enabled,
+          durationMinutes,
+        ),
+      ),
+    [mutate],
+  );
+
   return {
     protection,
     loading,
@@ -160,5 +176,6 @@ export function useSafeDateProtection(
     requestAssistance,
     clearAssistance,
     confirmSafeArrival,
+    setLocationConsent,
   };
 }
