@@ -17,15 +17,9 @@ import {
   supabase,
 } from '../../lib/supabase'
 
-type OtpChannel = 'email' | 'phone'
-
-type RequestOtpInput = {
-  channel: OtpChannel
-  contact: string
-}
-
-type VerifyOtpInput = RequestOtpInput & {
-  token: string
+type PasswordAuthInput = {
+  email: string
+  password: string
 }
 
 type AuthContextValue = {
@@ -33,11 +27,11 @@ type AuthContextValue = {
   initialized: boolean
   session: Session | null
   user: User | null
-  requestOtp: (
-    input: RequestOtpInput
+  signUpWithPassword: (
+    input: PasswordAuthInput
   ) => Promise<void>
-  verifyOtp: (
-    input: VerifyOtpInput
+  signInWithPassword: (
+    input: PasswordAuthInput
   ) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -124,71 +118,61 @@ export function AuthProvider({
       session,
       user: session?.user ?? null,
 
-      requestOtp: async ({
-        channel,
-        contact,
+      signUpWithPassword: async ({
+        email,
+        password,
       }) => {
         requireConfiguration()
 
-        const normalized = contact.trim()
+        const normalizedEmail =
+          email.trim().toLowerCase()
 
-        if (!normalized) {
+        if (!normalizedEmail || !password) {
           throw new Error(
-            'Enter your email address or phone number.'
+            'Email address and password are required.'
           )
         }
 
-        const result =
-          channel === 'email'
-            ? await supabase.auth.signInWithOtp({
-                email: normalized,
-                options: {
-                  shouldCreateUser: true,
-                },
-              })
-            : await supabase.auth.signInWithOtp({
-                phone: normalized,
-                options: {
-                  shouldCreateUser: true,
-                },
-              })
+        const { data, error } =
+          await supabase.auth.signUp({
+            email: normalizedEmail,
+            password,
+          })
 
-        if (result.error) {
-          throw result.error
+        if (error) {
+          throw error
+        }
+
+        if (!data.session) {
+          throw new Error(
+            'Your account was created, but BTME could not start your session.'
+          )
         }
       },
 
-      verifyOtp: async ({
-        channel,
-        contact,
-        token,
+      signInWithPassword: async ({
+        email,
+        password,
       }) => {
         requireConfiguration()
 
-        const normalizedContact = contact.trim()
-        const normalizedToken = token.trim()
+        const normalizedEmail =
+          email.trim().toLowerCase()
 
-        if (!normalizedContact || !normalizedToken) {
+        if (!normalizedEmail || !password) {
           throw new Error(
-            'Contact and verification code are required.'
+            'Email address and password are required.'
           )
         }
 
-        const result =
-          channel === 'email'
-            ? await supabase.auth.verifyOtp({
-                email: normalizedContact,
-                token: normalizedToken,
-                type: 'email',
-              })
-            : await supabase.auth.verifyOtp({
-                phone: normalizedContact,
-                token: normalizedToken,
-                type: 'sms',
-              })
+        const { error } =
+          await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          })
 
-        if (result.error) {
-          throw result.error
+        if (error) {
+          throw error
         }
       },
 

@@ -61,7 +61,7 @@ export default function WelcomeScreen() {
 
         <TextButton
           label="Sign in"
-          onPress={() => router.push('/join')}
+          onPress={() => router.push('/sign-in' as never)}
         />
 
         <Text style={styles.legal}>

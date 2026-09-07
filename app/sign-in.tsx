@@ -13,9 +13,6 @@ import {
   FormInput,
 } from '../src/components/FormInput';
 import {
-  OnboardingHeader,
-} from '../src/components/OnboardingHeader';
-import {
   OnboardingScreen,
 } from '../src/components/OnboardingScreen';
 import {
@@ -36,11 +33,11 @@ import {
 const EMAIL_PATTERN =
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function JoinScreen() {
+export default function SignInScreen() {
   const router = useRouter();
   const {
     configured,
-    signUpWithPassword,
+    signInWithPassword,
   } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -56,16 +53,16 @@ export default function JoinScreen() {
 
   const valid =
     EMAIL_PATTERN.test(normalizedEmail) &&
-    password.length >= 8;
+    password.length > 0;
 
-  const handleCreateAccount = async () => {
+  const handleSignIn = async () => {
     if (!valid || submitting) {
       return;
     }
 
     if (!configured) {
       setError(
-        'Account creation is temporarily unavailable.',
+        'Sign in is temporarily unavailable.',
       );
       return;
     }
@@ -74,17 +71,17 @@ export default function JoinScreen() {
     setError(null);
 
     try {
-      await signUpWithPassword({
+      await signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
-      router.replace('/birthday' as never);
+      router.replace('/' as never);
     } catch (caught) {
       const message =
         caught instanceof Error
           ? caught.message
-          : 'We could not create your account.';
+          : 'We could not sign you in.';
 
       setError(message);
     } finally {
@@ -99,38 +96,35 @@ export default function JoinScreen() {
           <PrimaryButton
             label={
               submitting
-                ? 'Creating account…'
-                : 'Create account →'
+                ? 'Signing in…'
+                : 'Sign in →'
             }
             disabled={!valid || submitting}
             onPress={() => {
-              void handleCreateAccount();
+              void handleSignIn();
             }}
           />
 
           <TextButton
-            label="Already a member? Sign in"
+            label="New here? Create an account"
             onPress={() =>
-              router.replace('/sign-in' as never)
+              router.replace('/join' as never)
             }
           />
         </View>
       }
     >
-      <OnboardingHeader step={1} />
-
       <View style={styles.content}>
         <Text style={styles.eyebrow}>
-          LET'S MAKE IT OFFICIAL
+          WELCOME BACK
         </Text>
 
         <Text style={styles.title}>
-          Create your account.
+          Sign in.
         </Text>
 
         <Text style={styles.body}>
-          One email. One password. No codes every
-          time you want to come back.
+          Pick up exactly where you left off.
         </Text>
 
         <View style={styles.form}>
@@ -147,9 +141,9 @@ export default function JoinScreen() {
           />
 
           <FormInput
-            autoComplete="new-password"
+            autoComplete="current-password"
             autoCapitalize="none"
-            placeholder="Create a password"
+            placeholder="Password"
             secureTextEntry
             value={password}
             onChangeText={(value) => {
@@ -158,11 +152,6 @@ export default function JoinScreen() {
             }}
           />
         </View>
-
-        <Text style={styles.note}>
-          Use at least 8 characters. Your email stays
-          private and is used to secure your account.
-        </Text>
 
         {error ? (
           <Text
@@ -200,12 +189,6 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.md,
     marginTop: spacing.xl,
-  },
-  note: {
-    marginTop: spacing.md,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
   },
   error: {
     marginTop: spacing.md,
