@@ -185,8 +185,9 @@ export default function SettingsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Log out"
-            onPress={() => {
-              void signOut();
+            onPress={async () => {
+              await signOut();
+              router.replace('/welcome' as never);
             }}
             style={styles.button}
           >
