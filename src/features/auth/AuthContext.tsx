@@ -12,6 +12,8 @@ import {
   useState,
 } from 'react'
 
+import * as Linking from 'expo-linking'
+
 import {
   isSupabaseConfigured,
   supabase,
@@ -33,6 +35,12 @@ type AuthContextValue = {
   signInWithPassword: (
     input: PasswordAuthInput
   ) => Promise<void>
+  requestPasswordReset: (
+    email: string
+  ) => Promise<void>
+  updatePassword: (
+    password: string
+  ) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -44,6 +52,39 @@ function requireConfiguration() {
     throw new Error(
       'BTME authentication is not configured on this device.'
     )
+  }
+}
+
+function recoverySessionFromUrl(url: string) {
+  const parsed = Linking.parse(url)
+  const params = parsed.queryParams ?? {}
+
+  const accessToken =
+    typeof params.access_token === 'string'
+      ? params.access_token
+      : null
+
+  const refreshToken =
+    typeof params.refresh_token === 'string'
+      ? params.refresh_token
+      : null
+
+  const type =
+    typeof params.type === 'string'
+      ? params.type
+      : null
+
+  if (
+    type !== 'recovery' ||
+    !accessToken ||
+    !refreshToken
+  ) {
+    return null
+  }
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
   }
 }
 
@@ -65,6 +106,31 @@ export function AuthProvider({
     }
 
     let active = true
+
+    const handleRecoveryUrl = async (
+      url: string | null
+    ) => {
+      if (!url) {
+        return
+      }
+
+      const tokens =
+        recoverySessionFromUrl(url)
+
+      if (!tokens) {
+        return
+      }
+
+      const { error } =
+        await supabase.auth.setSession(tokens)
+
+      if (error) {
+        console.warn(
+          '[BTME] Unable to establish recovery session:',
+          error.message
+        )
+      }
+    }
 
     const initialize = async () => {
       const {
@@ -89,6 +155,18 @@ export function AuthProvider({
 
     void initialize()
 
+    void Linking.getInitialURL().then(
+      handleRecoveryUrl
+    )
+
+    const linkSubscription =
+      Linking.addEventListener(
+        'url',
+        ({ url }) => {
+          void handleRecoveryUrl(url)
+        }
+      )
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -107,6 +185,7 @@ export function AuthProvider({
 
     return () => {
       active = false
+      linkSubscription.remove()
       subscription.unsubscribe()
     }
   }, [])
@@ -168,6 +247,56 @@ export function AuthProvider({
         const { error } =
           await supabase.auth.signInWithPassword({
             email: normalizedEmail,
+            password,
+          })
+
+        if (error) {
+          throw error
+        }
+      },
+
+      requestPasswordReset: async (
+        email
+      ) => {
+        requireConfiguration()
+
+        const normalizedEmail =
+          email.trim().toLowerCase()
+
+        if (!normalizedEmail) {
+          throw new Error(
+            'Email address is required.'
+          )
+        }
+
+        const { error } =
+          await supabase.auth
+            .resetPasswordForEmail(
+              normalizedEmail,
+              {
+                redirectTo:
+                  'btme://reset-password',
+              }
+            )
+
+        if (error) {
+          throw error
+        }
+      },
+
+      updatePassword: async (
+        password
+      ) => {
+        requireConfiguration()
+
+        if (password.length < 8) {
+          throw new Error(
+            'Password must be at least 8 characters.'
+          )
+        }
+
+        const { error } =
+          await supabase.auth.updateUser({
             password,
           })
 

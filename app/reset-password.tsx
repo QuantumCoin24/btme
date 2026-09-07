@@ -19,9 +19,6 @@ import {
   PrimaryButton,
 } from '../src/components/PrimaryButton';
 import {
-  TextButton,
-} from '../src/components/TextButton';
-import {
   useAuth,
 } from '../src/features/auth/AuthContext';
 import {
@@ -30,39 +27,34 @@ import {
   typography,
 } from '../src/theme/tokens';
 
-const EMAIL_PATTERN =
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export default function SignInScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
   const {
-    configured,
-    signInWithPassword,
+    session,
+    updatePassword,
   } = useAuth();
 
-  const [email, setEmail] = useState('');
   const [password, setPassword] =
+    useState('');
+  const [confirmPassword, setConfirmPassword] =
     useState('');
   const [submitting, setSubmitting] =
     useState(false);
   const [error, setError] =
     useState<string | null>(null);
 
-  const normalizedEmail =
-    email.trim().toLowerCase();
-
   const valid =
-    EMAIL_PATTERN.test(normalizedEmail) &&
-    password.length > 0;
+    password.length >= 8 &&
+    password === confirmPassword;
 
-  const handleSignIn = async () => {
+  const handleUpdate = async () => {
     if (!valid || submitting) {
       return;
     }
 
-    if (!configured) {
+    if (!session) {
       setError(
-        'Sign in is temporarily unavailable.',
+        'This recovery link is invalid or has expired.',
       );
       return;
     }
@@ -71,17 +63,13 @@ export default function SignInScreen() {
     setError(null);
 
     try {
-      await signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
-
+      await updatePassword(password);
       router.replace('/' as never);
     } catch (caught) {
       const message =
         caught instanceof Error
           ? caught.message
-          : 'We could not sign you in.';
+          : 'We could not update your password.';
 
       setError(message);
     } finally {
@@ -92,58 +80,37 @@ export default function SignInScreen() {
   return (
     <OnboardingScreen
       footer={
-        <View style={styles.footer}>
-          <PrimaryButton
-            label={
-              submitting
-                ? 'Signing in…'
-                : 'Sign in →'
-            }
-            disabled={!valid || submitting}
-            onPress={() => {
-              void handleSignIn();
-            }}
-          />
-
-          <TextButton
-            label="New here? Create an account"
-            onPress={() =>
-              router.replace('/join' as never)
-            }
-          />
-        </View>
+        <PrimaryButton
+          label={
+            submitting
+              ? 'Updating password…'
+              : 'Save new password →'
+          }
+          disabled={!valid || submitting}
+          onPress={() => {
+            void handleUpdate();
+          }}
+        />
       }
     >
       <View style={styles.content}>
         <Text style={styles.eyebrow}>
-          WELCOME BACK
+          SECURE YOUR ACCOUNT
         </Text>
 
         <Text style={styles.title}>
-          Sign in.
+          Choose a new password.
         </Text>
 
         <Text style={styles.body}>
-          Pick up exactly where you left off.
+          Use at least 8 characters.
         </Text>
 
         <View style={styles.form}>
           <FormInput
-            autoComplete="email"
+            autoComplete="new-password"
             autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setError(null);
-            }}
-          />
-
-          <FormInput
-            autoComplete="current-password"
-            autoCapitalize="none"
-            placeholder="Password"
+            placeholder="New password"
             secureTextEntry
             value={password}
             onChangeText={(value) => {
@@ -152,15 +119,25 @@ export default function SignInScreen() {
             }}
           />
 
-          <TextButton
-            label="Forgot password?"
-            onPress={() =>
-              router.push(
-                '/forgot-password' as never
-              )
-            }
+          <FormInput
+            autoComplete="new-password"
+            autoCapitalize="none"
+            placeholder="Confirm new password"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={(value) => {
+              setConfirmPassword(value);
+              setError(null);
+            }}
           />
         </View>
+
+        {confirmPassword.length > 0 &&
+        password !== confirmPassword ? (
+          <Text style={styles.error}>
+            Passwords do not match.
+          </Text>
+        ) : null}
 
         {error ? (
           <Text
@@ -204,8 +181,5 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 13,
     lineHeight: 19,
-  },
-  footer: {
-    gap: spacing.sm,
   },
 });

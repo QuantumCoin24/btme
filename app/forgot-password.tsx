@@ -33,17 +33,17 @@ import {
 const EMAIL_PATTERN =
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function SignInScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const {
     configured,
-    signInWithPassword,
+    requestPasswordReset,
   } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] =
-    useState('');
   const [submitting, setSubmitting] =
+    useState(false);
+  const [sent, setSent] =
     useState(false);
   const [error, setError] =
     useState<string | null>(null);
@@ -52,17 +52,16 @@ export default function SignInScreen() {
     email.trim().toLowerCase();
 
   const valid =
-    EMAIL_PATTERN.test(normalizedEmail) &&
-    password.length > 0;
+    EMAIL_PATTERN.test(normalizedEmail);
 
-  const handleSignIn = async () => {
+  const handleReset = async () => {
     if (!valid || submitting) {
       return;
     }
 
     if (!configured) {
       setError(
-        'Sign in is temporarily unavailable.',
+        'Password recovery is temporarily unavailable.',
       );
       return;
     }
@@ -71,17 +70,15 @@ export default function SignInScreen() {
     setError(null);
 
     try {
-      await signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
-
-      router.replace('/' as never);
+      await requestPasswordReset(
+        normalizedEmail,
+      );
+      setSent(true);
     } catch (caught) {
       const message =
         caught instanceof Error
           ? caught.message
-          : 'We could not sign you in.';
+          : 'We could not send the recovery email.';
 
       setError(message);
     } finally {
@@ -93,22 +90,24 @@ export default function SignInScreen() {
     <OnboardingScreen
       footer={
         <View style={styles.footer}>
-          <PrimaryButton
-            label={
-              submitting
-                ? 'Signing in…'
-                : 'Sign in →'
-            }
-            disabled={!valid || submitting}
-            onPress={() => {
-              void handleSignIn();
-            }}
-          />
+          {!sent ? (
+            <PrimaryButton
+              label={
+                submitting
+                  ? 'Sending…'
+                  : 'Send recovery email →'
+              }
+              disabled={!valid || submitting}
+              onPress={() => {
+                void handleReset();
+              }}
+            />
+          ) : null}
 
           <TextButton
-            label="New here? Create an account"
+            label="Back to sign in"
             onPress={() =>
-              router.replace('/join' as never)
+              router.replace('/sign-in' as never)
             }
           />
         </View>
@@ -116,60 +115,50 @@ export default function SignInScreen() {
     >
       <View style={styles.content}>
         <Text style={styles.eyebrow}>
-          WELCOME BACK
+          PASSWORD RECOVERY
         </Text>
 
         <Text style={styles.title}>
-          Sign in.
+          Reset your password.
         </Text>
 
         <Text style={styles.body}>
-          Pick up exactly where you left off.
+          Enter the email linked to your BTME
+          account. We’ll send you a secure recovery
+          link.
         </Text>
 
-        <View style={styles.form}>
-          <FormInput
-            autoComplete="email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@example.com"
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setError(null);
-            }}
-          />
+        {!sent ? (
+          <>
+            <View style={styles.form}>
+              <FormInput
+                autoComplete="email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  setError(null);
+                }}
+              />
+            </View>
 
-          <FormInput
-            autoComplete="current-password"
-            autoCapitalize="none"
-            placeholder="Password"
-            secureTextEntry
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-              setError(null);
-            }}
-          />
-
-          <TextButton
-            label="Forgot password?"
-            onPress={() =>
-              router.push(
-                '/forgot-password' as never
-              )
-            }
-          />
-        </View>
-
-        {error ? (
-          <Text
-            accessibilityRole="alert"
-            style={styles.error}
-          >
-            {error}
+            {error ? (
+              <Text
+                accessibilityRole="alert"
+                style={styles.error}
+              >
+                {error}
+              </Text>
+            ) : null}
+          </>
+        ) : (
+          <Text style={styles.success}>
+            Check your email. Open the recovery link
+            on this iPhone to choose a new password.
           </Text>
-        ) : null}
+        )}
       </View>
     </OnboardingScreen>
   );
@@ -196,7 +185,6 @@ const styles = StyleSheet.create({
     ...typography.body,
   },
   form: {
-    gap: spacing.md,
     marginTop: spacing.xl,
   },
   error: {
@@ -204,6 +192,11 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 13,
     lineHeight: 19,
+  },
+  success: {
+    marginTop: spacing.xl,
+    color: colors.textPrimary,
+    ...typography.body,
   },
   footer: {
     gap: spacing.sm,
