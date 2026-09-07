@@ -10,7 +10,12 @@
       "supportsTablet": false,
       "bundleIdentifier": "uk.betterthanmyex.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Better Than My Ex uses your location during an active SafeDate when you choose to enable location protection.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Better Than My Ex uses your location in the background during an active SafeDate when you explicitly enable location protection, so SafeDate protection can continue while the app is not open.",
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
