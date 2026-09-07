@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -14,6 +14,10 @@ import {
 import { useDiscovery } from "../../../src/features/discovery/DiscoveryContext";
 import { useSafeDate } from "../../../src/features/safedate/SafeDateContext";
 import { useSafeDateProtection } from "../../../src/features/safedate/useSafeDateProtection";
+import {
+  disableMySafeDateLocationProtection,
+  enableMySafeDateLocationProtection,
+} from "../../../src/features/safedate/safeDateLocationAuthority";
 import {
   colors,
   radius,
@@ -39,6 +43,10 @@ function formatMoment(value: string | null) {
 
 export default function SafeDateScreen() {
   const router = useRouter();
+  const [locationMutating, setLocationMutating] =
+    useState(false);
+  const [locationError, setLocationError] =
+    useState<string | null>(null);
 
   const {
     datePlanId: rawDatePlanId,
@@ -187,9 +195,62 @@ export default function SafeDateScreen() {
       ?.checkInIntervalMinutes ??
     null;
 
+  const locationEnabled =
+    Boolean(
+      protection?.locationSharingEnabled &&
+      protection.locationSharingExpiresAt &&
+      new Date(
+        protection.locationSharingExpiresAt,
+      ).getTime() > Date.now(),
+    );
+
   const protectionBusy =
     protectionLoading ||
-    protectionMutating;
+    protectionMutating ||
+    locationMutating;
+
+  async function handleLocationProtection() {
+    if (!datePlanId || locationMutating) {
+      return;
+    }
+
+    setLocationMutating(true);
+    setLocationError(null);
+
+    try {
+      if (locationEnabled) {
+        await disableMySafeDateLocationProtection(
+          datePlanId,
+        );
+      } else {
+        const result =
+          await enableMySafeDateLocationProtection(
+            datePlanId,
+          );
+
+        if (!result.enabled) {
+          setLocationError(
+            result.canAskAgain
+              ? "Location permission is required to enable SafeDate location protection."
+              : "Location permission is disabled. Enable location access for Better Than My Ex in iPhone Settings to use this protection.",
+          );
+          return;
+        }
+      }
+
+      await loadSessionForDatePlan(
+        datePlanId,
+      );
+    } catch (caught) {
+      setLocationError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not update your location protection.",
+      );
+    } finally {
+      setLocationMutating(false);
+    }
+  }
 
   async function handleStart() {
     if (!plan || isMutatingSession) {
@@ -624,7 +685,74 @@ export default function SafeDateScreen() {
                         : "Set 30 min timer"}
                     </Text>
                   </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      locationEnabled
+                        ? "Disable location protection"
+                        : "Enable location protection"
+                    }
+                    accessibilityState={{
+                      disabled: protectionBusy,
+                      selected: locationEnabled,
+                    }}
+                    disabled={
+                      protectionBusy
+                    }
+                    onPress={() =>
+                      void handleLocationProtection()
+                    }
+                    style={({ pressed }) => [
+                      styles.controlButton,
+                      locationEnabled &&
+                        styles.locationActive,
+                      protectionBusy &&
+                        styles.disabledButton,
+                      pressed &&
+                        !protectionBusy &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        styles.controlIcon
+                      }
+                    >
+                      ◎
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.controlTitle
+                      }
+                    >
+                      LOCATION PROTECTION
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.controlBody
+                      }
+                    >
+                      {locationMutating
+                        ? "Updating protection…"
+                        : locationEnabled
+                          ? "Active · tap to turn off"
+                          : "Off · tap to enable"}
+                    </Text>
+                  </Pressable>
                 </View>
+
+                {locationError ? (
+                  <Text
+                    style={
+                      styles.errorText
+                    }
+                  >
+                    {locationError}
+                  </Text>
+                ) : null}
 
                 <Pressable
                   accessibilityRole="button"
@@ -1186,6 +1314,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
+  },
+
+  locationActive: {
+    borderColor: colors.accent,
+    borderWidth: 2,
   },
 
   assistanceButton: {
