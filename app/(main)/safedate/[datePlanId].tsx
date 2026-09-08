@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import {
@@ -18,6 +19,14 @@ import {
   disableMySafeDateLocationProtection,
   enableMySafeDateLocationProtection,
 } from "../../../src/features/safedate/safeDateLocationAuthority";
+import {
+  addMySafeDateTrustedContact,
+  getMyActiveSafeDateTrustedContacts,
+  getMySafeDateTrustedContacts,
+  revokeMySafeDateTrustedContact,
+  setMySafeDateTrustedContactEnabled,
+  type SafeDateTrustedContact,
+} from "../../../src/features/safedate/safeDateTrustedContacts";
 import {
   colors,
   radius,
@@ -46,6 +55,20 @@ export default function SafeDateScreen() {
   const [locationMutating, setLocationMutating] =
     useState(false);
   const [locationError, setLocationError] =
+    useState<string | null>(null);
+  const [trustedContacts, setTrustedContacts] =
+    useState<SafeDateTrustedContact[]>([]);
+  const [activeTrustedContactIds, setActiveTrustedContactIds] =
+    useState<Set<string>>(new Set());
+  const [trustedContactName, setTrustedContactName] =
+    useState("");
+  const [trustedContactPhone, setTrustedContactPhone] =
+    useState("");
+  const [trustedContactEmail, setTrustedContactEmail] =
+    useState("");
+  const [trustedContactMutating, setTrustedContactMutating] =
+    useState(false);
+  const [trustedContactError, setTrustedContactError] =
     useState<string | null>(null);
 
   const {
@@ -109,6 +132,7 @@ export default function SafeDateScreen() {
     requestAssistance,
     clearAssistance,
     confirmSafeArrival,
+    refresh: refreshProtection,
   } = useSafeDateProtection(
     datePlanId,
     protectionActive,
@@ -238,9 +262,7 @@ export default function SafeDateScreen() {
         }
       }
 
-      await loadSessionForDatePlan(
-        datePlanId,
-      );
+      await refreshProtection();
     } catch (caught) {
       setLocationError(
         caught instanceof Error
@@ -251,6 +273,163 @@ export default function SafeDateScreen() {
       setLocationMutating(false);
     }
   }
+
+  async function refreshTrustedContacts() {
+    if (!datePlanId || !protectionActive) {
+      setTrustedContacts([]);
+      setActiveTrustedContactIds(new Set());
+      return;
+    }
+
+    try {
+      const [contacts, activeContacts] = await Promise.all([
+        getMySafeDateTrustedContacts(),
+        getMyActiveSafeDateTrustedContacts(datePlanId),
+      ]);
+
+      setTrustedContacts(contacts);
+      setActiveTrustedContactIds(
+        new Set(activeContacts.map((contact) => contact.id)),
+      );
+      setTrustedContactError(null);
+    } catch (caught) {
+      setTrustedContactError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not load your trusted contacts.",
+      );
+    }
+  }
+
+  async function handleAddTrustedContact() {
+    if (
+      !datePlanId ||
+      trustedContactMutating ||
+      !trustedContactName.trim() ||
+      (!trustedContactPhone.trim() &&
+        !trustedContactEmail.trim())
+    ) {
+      if (
+        !trustedContactName.trim() ||
+        (!trustedContactPhone.trim() &&
+          !trustedContactEmail.trim())
+      ) {
+        setTrustedContactError(
+          "Add a name and at least a phone number or email address.",
+        );
+      }
+      return;
+    }
+
+    setTrustedContactMutating(true);
+    setTrustedContactError(null);
+
+    try {
+      const contactId =
+        await addMySafeDateTrustedContact({
+          name: trustedContactName.trim(),
+          phone: trustedContactPhone.trim() || null,
+          email: trustedContactEmail.trim() || null,
+        });
+
+      await setMySafeDateTrustedContactEnabled(
+        datePlanId,
+        contactId,
+        true,
+      );
+
+      setTrustedContactName("");
+      setTrustedContactPhone("");
+      setTrustedContactEmail("");
+
+      await Promise.all([
+        refreshTrustedContacts(),
+        refreshProtection(),
+      ]);
+    } catch (caught) {
+      setTrustedContactError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not add your trusted contact.",
+      );
+    } finally {
+      setTrustedContactMutating(false);
+    }
+  }
+
+  async function handleToggleTrustedContact(
+    trustedContactId: string,
+  ) {
+    if (!datePlanId || trustedContactMutating) {
+      return;
+    }
+
+    const currentlyEnabled =
+      activeTrustedContactIds.has(trustedContactId);
+
+    setTrustedContactMutating(true);
+    setTrustedContactError(null);
+
+    try {
+      await setMySafeDateTrustedContactEnabled(
+        datePlanId,
+        trustedContactId,
+        !currentlyEnabled,
+      );
+
+      await Promise.all([
+        refreshTrustedContacts(),
+        refreshProtection(),
+      ]);
+    } catch (caught) {
+      setTrustedContactError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not update trusted-contact protection.",
+      );
+    } finally {
+      setTrustedContactMutating(false);
+    }
+  }
+
+  async function handleRemoveTrustedContact(
+    trustedContactId: string,
+  ) {
+    if (trustedContactMutating) {
+      return;
+    }
+
+    setTrustedContactMutating(true);
+    setTrustedContactError(null);
+
+    try {
+      await revokeMySafeDateTrustedContact(
+        trustedContactId,
+      );
+
+      await Promise.all([
+        refreshTrustedContacts(),
+        refreshProtection(),
+      ]);
+    } catch (caught) {
+      setTrustedContactError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not remove your trusted contact.",
+      );
+    } finally {
+      setTrustedContactMutating(false);
+    }
+  }
+
+  useEffect(() => {
+    if (protectionActive && datePlanId) {
+      void refreshTrustedContacts();
+    } else {
+      setTrustedContacts([]);
+      setActiveTrustedContactIds(new Set());
+    }
+  }, [datePlanId, protectionActive]);
 
   async function handleStart() {
     if (!plan || isMutatingSession) {
@@ -579,6 +758,153 @@ export default function SafeDateScreen() {
                     {protectionError}
                   </Text>
                 ) : null}
+
+                <View style={styles.trustedContactSection}>
+                  <Text style={styles.controlTitle}>
+                    TRUSTED CONTACTS
+                  </Text>
+                  <Text style={styles.controlBody}>
+                    Choose people you trust for your side of this SafeDate™.
+                    Your date cannot view or control this list.
+                  </Text>
+
+                  {trustedContacts.map((contact) => {
+                    const enabled =
+                      activeTrustedContactIds.has(contact.id);
+
+                    return (
+                      <View
+                        key={contact.id}
+                        style={styles.trustedContactRow}
+                      >
+                        <View style={styles.trustedContactIdentity}>
+                          <Text style={styles.trustedContactName}>
+                            {contact.name}
+                          </Text>
+                          <Text style={styles.controlBody}>
+                            {contact.phone ??
+                              contact.email ??
+                              "Private trusted contact"}
+                          </Text>
+                        </View>
+
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            enabled
+                              ? `Disable ${contact.name} for this SafeDate`
+                              : `Enable ${contact.name} for this SafeDate`
+                          }
+                          disabled={trustedContactMutating}
+                          onPress={() =>
+                            void handleToggleTrustedContact(
+                              contact.id,
+                            )
+                          }
+                          style={({ pressed }) => [
+                            styles.trustedContactToggle,
+                            enabled &&
+                              styles.trustedContactToggleActive,
+                            pressed &&
+                              styles.buttonPressed,
+                          ]}
+                        >
+                          <Text style={styles.trustedContactToggleText}>
+                            {enabled ? "ACTIVE" : "OFF"}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${contact.name}`}
+                          disabled={trustedContactMutating}
+                          onPress={() =>
+                            void handleRemoveTrustedContact(
+                              contact.id,
+                            )
+                          }
+                          style={({ pressed }) => [
+                            styles.trustedContactRemove,
+                            pressed &&
+                              styles.buttonPressed,
+                          ]}
+                        >
+                          <Text style={styles.trustedContactRemoveText}>
+                            REMOVE
+                          </Text>
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+
+                  <TextInput
+                    accessibilityLabel="Trusted contact name"
+                    placeholder="Name"
+                    placeholderTextColor={colors.textSecondary}
+                    value={trustedContactName}
+                    onChangeText={setTrustedContactName}
+                    autoCapitalize="words"
+                    style={styles.trustedContactInput}
+                  />
+
+                  <TextInput
+                    accessibilityLabel="Trusted contact phone"
+                    placeholder="Phone number"
+                    placeholderTextColor={colors.textSecondary}
+                    value={trustedContactPhone}
+                    onChangeText={setTrustedContactPhone}
+                    keyboardType="phone-pad"
+                    style={styles.trustedContactInput}
+                  />
+
+                  <TextInput
+                    accessibilityLabel="Trusted contact email"
+                    placeholder="Email address"
+                    placeholderTextColor={colors.textSecondary}
+                    value={trustedContactEmail}
+                    onChangeText={setTrustedContactEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={styles.trustedContactInput}
+                  />
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Add trusted contact"
+                    disabled={trustedContactMutating}
+                    onPress={() =>
+                      void handleAddTrustedContact()
+                    }
+                    style={({ pressed }) => [
+                      styles.secondaryButton,
+                      trustedContactMutating &&
+                        styles.disabledButton,
+                      pressed &&
+                        !trustedContactMutating &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {trustedContactMutating
+                        ? "Updating…"
+                        : "Add trusted contact"}
+                    </Text>
+                  </Pressable>
+
+                  {trustedContactError ? (
+                    <Text style={styles.errorText}>
+                      {trustedContactError}
+                    </Text>
+                  ) : null}
+
+                  <Text style={styles.mutedText}>
+                    Trusted-contact alerts are prepared by BTME's
+                    server-side safety system. External delivery is
+                    only claimed once a supported delivery channel
+                    confirms it.
+                  </Text>
+                </View>
 
                 <View
                   style={
@@ -919,13 +1245,14 @@ export default function SafeDateScreen() {
                 assistance state and
                 safe-arrival
                 confirmation. It does
-                not currently provide
-                GPS tracking,
-                trusted-contact
-                delivery, background
-                monitoring or
-                emergency-service
-                integration.
+                uses opt-in foreground
+                location capture when you
+                enable it. It does not
+                currently provide continuous
+                GPS tracking, confirmed
+                trusted-contact delivery,
+                background monitoring or
+                emergency-service integration.
               </Text>
             </View>
 
@@ -999,10 +1326,10 @@ export default function SafeDateScreen() {
           }
         >
           SAFEDATE™ · SERVER-BACKED ·
-          PRIVATE CHECK-INS ·
-          INDEPENDENT END CONTROL · NO
-          GPS · NO EMERGENCY-SERVICE
-          INTEGRATION
+          PRIVATE CHECK-INS · OPT-IN
+          LOCATION CAPTURE · INDEPENDENT
+          END CONTROL · NO CONTINUOUS GPS ·
+          NO EMERGENCY-SERVICE INTEGRATION
         </Text>
       </ScrollView>
     </View>
@@ -1010,6 +1337,69 @@ export default function SafeDateScreen() {
 }
 
 const styles = StyleSheet.create({
+  trustedContactSection: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    gap: spacing.sm,
+  },
+  trustedContactRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
+  trustedContactIdentity: {
+    flex: 1,
+  },
+  trustedContactName: {
+    color: colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "800",
+  },
+  trustedContactToggle: {
+    minHeight: 38,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trustedContactToggleActive: {
+    borderColor: colors.accent,
+  },
+  trustedContactToggleText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  trustedContactRemove: {
+    minHeight: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trustedContactRemoveText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  trustedContactInput: {
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
   screen: {
     flex: 1,
     backgroundColor:

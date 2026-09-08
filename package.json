@@ -8,6 +8,7 @@
     "expo-camera": "57.0.4",
     "expo-constants": "~57.0.16",
     "expo-dev-client": "~57.0.18",
+    "expo-device": "~57.0.1",
     "expo-iap": "^5.5.0",
     "expo-image-picker": "~57.0.16",
     "expo-linking": "~57.0.9",
