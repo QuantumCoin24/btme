@@ -15,7 +15,8 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Better Than My Ex uses your location in the background during an active SafeDate when you explicitly enable location protection, so SafeDate protection can continue while the app is not open.",
         "UIBackgroundModes": [
           "location"
-        ]
+        ],
+        "NSMotionUsageDescription": "Better Than My Ex may use motion data during an active SafeDate to support safety and location-related features when you choose to enable SafeDate protection."
       }
     },
     "android": {
