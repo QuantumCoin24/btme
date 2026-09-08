@@ -6,6 +6,7 @@ import {
 
 import {
   SafeDateProtection,
+  acknowledgeMySafeDateAssistance,
   checkInMySafeDate,
   clearMySafeDateAssistance,
   configureMySafeDateCheckIn,
@@ -180,6 +181,14 @@ export function useSafeDateProtection(
     [mutate],
   );
 
+  const acknowledgeAssistance = useCallback(
+    () =>
+      mutate(
+        acknowledgeMySafeDateAssistance,
+      ),
+    [mutate],
+  );
+
   const clearAssistance = useCallback(
     () =>
       mutate(
@@ -220,6 +229,7 @@ export function useSafeDateProtection(
     checkIn,
     setCheckInInterval,
     requestAssistance,
+    acknowledgeAssistance,
     clearAssistance,
     confirmSafeArrival,
     setLocationConsent,

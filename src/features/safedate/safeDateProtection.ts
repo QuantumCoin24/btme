@@ -140,6 +140,17 @@ export async function requestMySafeDateAssistance(
   );
 }
 
+export async function acknowledgeMySafeDateAssistance(
+  datePlanId: string,
+) {
+  await invokeVoid(
+    'acknowledge_my_safe_date_assistance',
+    {
+      p_date_plan_id: datePlanId,
+    },
+  );
+}
+
 export async function clearMySafeDateAssistance(
   datePlanId: string,
 ) {
