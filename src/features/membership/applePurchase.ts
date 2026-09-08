@@ -169,10 +169,17 @@ export async function restoreAppleMembershipPurchases() {
       if (result) {
         results.push(result);
       }
-    } catch {
-      // Restore is best-effort across Apple purchase history.
-      // One expired, revoked, stale, or otherwise inactive
-      // historical transaction must not abort the full restore.
+    } catch (caught) {
+      // Keep scanning Apple purchase history, but preserve the
+      // verification failure so a zero-result restore reports
+      // the real cause instead of falsely claiming no purchase.
+      restoreVerificationErrors.push(
+        caught instanceof Error
+          ? caught
+          : new Error(
+              "Apple membership verification failed during restore.",
+            ),
+      );
       continue;
     }
   }
