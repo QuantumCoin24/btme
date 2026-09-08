@@ -164,3 +164,86 @@ export async function getMyActiveSafeDateTrustedContacts(
     }),
   );
 }
+
+export async function createMySafeDateTrustedContactInvite(
+  trustedContactId: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    "create_my_safe_date_trusted_contact_invite",
+    {
+      p_trusted_contact_id: trustedContactId,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      messageFor(
+        error,
+        "Unable to create trusted contact invite.",
+      ),
+    );
+  }
+
+  if (typeof data !== "string" || !data) {
+    throw new Error(
+      "Trusted contact invite was not created.",
+    );
+  }
+
+  return data;
+}
+
+export async function acceptSafeDateTrustedContactInvite(
+  token: string,
+): Promise<void> {
+  const { error } = await supabase.rpc(
+    "accept_safe_date_trusted_contact_invite",
+    {
+      p_token: token,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      messageFor(
+        error,
+        "Unable to accept trusted contact invite.",
+      ),
+    );
+  }
+}
+
+export async function getMySafeDateTrustedContactLinkState(
+  trustedContactId: string,
+): Promise<{
+  linked: boolean;
+  linkedAt: string | null;
+}> {
+  const { data, error } = await supabase.rpc(
+    "get_my_safe_date_trusted_contact_link_state",
+    {
+      p_trusted_contact_id: trustedContactId,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      messageFor(
+        error,
+        "Unable to load trusted contact link state.",
+      ),
+    );
+  }
+
+  const row = Array.isArray(data)
+    ? data[0]
+    : null;
+
+  return {
+    linked: Boolean(row?.linked),
+    linkedAt:
+      typeof row?.linked_at === "string"
+        ? row.linked_at
+        : null,
+  };
+}

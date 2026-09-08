@@ -18,6 +18,9 @@ import {
   isSupabaseConfigured,
   supabase,
 } from '../../lib/supabase'
+import { stopSafeDateBackgroundLocation } from '../safedate/safeDateBackgroundLocation'
+import { disableMySafeDatePushDevices } from '../safedate/safeDatePush'
+
 
 type PasswordAuthInput = {
   email: string
@@ -319,6 +322,11 @@ export function AuthProvider({
 
       signOut: async () => {
         requireConfiguration()
+
+        await Promise.allSettled([
+          stopSafeDateBackgroundLocation(),
+          disableMySafeDatePushDevices(),
+        ])
 
         const { error } =
           await supabase.auth.signOut()
