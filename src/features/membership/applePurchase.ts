@@ -9,6 +9,7 @@ import {
   purchaseUpdatedListener,
   requestPurchase,
   type Purchase,
+  restorePurchases,
 } from "expo-iap";
 
 import {
@@ -147,6 +148,8 @@ export async function startAppleMembershipPurchase(
 export async function restoreAppleMembershipPurchases() {
   requireAppleStorePlatform();
 
+  await restorePurchases();
+
   const purchases = await getAvailablePurchases();
 
   const relevant = purchases
@@ -160,6 +163,8 @@ export async function restoreAppleMembershipPurchases() {
     );
 
   const results: ApplePurchaseResult[] = [];
+
+  const restoreVerificationErrors: Error[] = [];
 
   for (const purchase of relevant) {
     try {
@@ -175,6 +180,13 @@ export async function restoreAppleMembershipPurchases() {
       continue;
     }
   }
+
+  if (results.length === 0 && restoreVerificationErrors.length > 0) {
+
+    throw restoreVerificationErrors[0];
+
+  }
+
 
   return results;
 }
