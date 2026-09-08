@@ -1,6 +1,4 @@
 import {
-  APIException,
-  AppStoreServerAPIClient,
   Environment,
   SignedDataVerifier,
 } from "@apple/app-store-server-library";
@@ -12,10 +10,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-const APPLE_ISSUER_ID = Deno.env.get("APPLE_ISSUER_ID");
-const APPLE_KEY_ID = Deno.env.get("APPLE_KEY_ID");
-const APPLE_IAP_PRIVATE_KEY = Deno.env.get("APPLE_IAP_PRIVATE_KEY");
 
 const APPLE_ROOT_CA_1 = Deno.env.get("APPLE_ROOT_CA_1");
 const APPLE_ROOT_CA_2 = Deno.env.get("APPLE_ROOT_CA_2");
@@ -61,16 +55,6 @@ function requireServerConfiguration() {
   }
 
   if (
-    !APPLE_ISSUER_ID ||
-    !APPLE_KEY_ID ||
-    !APPLE_IAP_PRIVATE_KEY
-  ) {
-    throw new Error(
-      "Apple server credentials are incomplete.",
-    );
-  }
-
-  if (
     !APPLE_ROOT_CA_1 ||
     !APPLE_ROOT_CA_2 ||
     !APPLE_ROOT_CA_3
@@ -90,19 +74,6 @@ function appleRoots(): Buffer[] {
     Buffer.from(certificate, "base64")
   );
 }
-
-type VerifiedAppleTransaction = {
-  transactionId: string;
-  originalTransactionId: string;
-  productId: string;
-  bundleId: string;
-  environment: "Production" | "Sandbox";
-  appAccountToken: string;
-  purchaseDate: number;
-  signedDate: number;
-  expiresDate: number;
-  revocationDate?: number | null;
-};
 
 function normalizeUuid(value: string) {
   return value.trim().toLowerCase();
@@ -140,25 +111,53 @@ function requireNumber(
   return value;
 }
 
-function isTransactionNotFound(error: unknown) {
-  if (!(error instanceof APIException)) {
-    return false;
+function readUntrustedEnvironment(
+  signedTransaction: string,
+): Environment {
+  const parts = signedTransaction.split(".");
+
+  if (parts.length !== 3) {
+    throw new Error("Apple signed transaction is malformed.");
   }
 
-  return error.apiError === 4040010;
+  let payload: Record<string, unknown>;
+
+  try {
+    const normalized = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+    const padded =
+      normalized +
+      "=".repeat((4 - (normalized.length % 4)) % 4);
+
+    payload = JSON.parse(
+      Buffer.from(padded, "base64").toString("utf8"),
+    );
+  } catch {
+    throw new Error(
+      "Apple signed transaction payload is malformed.",
+    );
+  }
+
+  if (payload.environment === "Sandbox") {
+    return Environment.SANDBOX;
+  }
+
+  if (payload.environment === "Production") {
+    return Environment.PRODUCTION;
+  }
+
+  throw new Error(
+    "Apple signed transaction environment is invalid.",
+  );
 }
 
-async function fetchAndVerifyTransaction(
-  transactionId: string,
-  environment: Environment,
-): Promise<VerifiedAppleTransaction> {
-  const client = new AppStoreServerAPIClient(
-    APPLE_IAP_PRIVATE_KEY!,
-    APPLE_KEY_ID!,
-    APPLE_ISSUER_ID!,
-    EXPECTED_BUNDLE_ID,
-    environment,
-  );
+async function verifySignedTransaction(
+  signedTransaction: string,
+) {
+  const environment =
+    readUntrustedEnvironment(signedTransaction);
 
   const verifier = new SignedDataVerifier(
     appleRoots(),
@@ -170,65 +169,15 @@ async function fetchAndVerifyTransaction(
       : undefined,
   );
 
-  const response =
-    await client.getTransactionInfo(transactionId);
-
-  if (!response.signedTransactionInfo) {
-    throw new Error(
-      "Apple did not return signed transaction information.",
-    );
-  }
-
   const decoded =
     await verifier.verifyAndDecodeTransaction(
-      response.signedTransactionInfo,
+      signedTransaction,
     );
 
-  const verifiedTransactionId = requireString(
-    decoded.transactionId,
-    "transactionId",
+  const decodedEnvironment = requireString(
+    decoded.environment,
+    "environment",
   );
-
-  const originalTransactionId = requireString(
-    decoded.originalTransactionId,
-    "originalTransactionId",
-  );
-
-  const productId = requireString(
-    decoded.productId,
-    "productId",
-  );
-
-  const bundleId = requireString(
-    decoded.bundleId,
-    "bundleId",
-  );
-
-  const appAccountToken = requireString(
-    decoded.appAccountToken,
-    "appAccountToken",
-  );
-  const purchaseDate = requireNumber(
-    decoded.purchaseDate,
-    "purchaseDate",
-  );
-
-  const signedDate = requireNumber(
-    decoded.signedDate,
-    "signedDate",
-  );
-
-
-  const expiresDate = requireNumber(
-    decoded.expiresDate,
-    "expiresDate",
-  );
-
-  const decodedEnvironment =
-    requireString(
-      decoded.environment,
-      "environment",
-    );
 
   const expectedEnvironment =
     environment === Environment.PRODUCTION
@@ -242,40 +191,44 @@ async function fetchAndVerifyTransaction(
   }
 
   return {
-    transactionId: verifiedTransactionId,
-    originalTransactionId,
-    productId,
-    bundleId,
+    transactionId: requireString(
+      decoded.transactionId,
+      "transactionId",
+    ),
+    originalTransactionId: requireString(
+      decoded.originalTransactionId,
+      "originalTransactionId",
+    ),
+    productId: requireString(
+      decoded.productId,
+      "productId",
+    ),
+    bundleId: requireString(
+      decoded.bundleId,
+      "bundleId",
+    ),
     environment: expectedEnvironment,
-    appAccountToken,
-    purchaseDate,
-    signedDate,
-    expiresDate,
+    appAccountToken: requireString(
+      decoded.appAccountToken,
+      "appAccountToken",
+    ),
+    purchaseDate: requireNumber(
+      decoded.purchaseDate,
+      "purchaseDate",
+    ),
+    signedDate: requireNumber(
+      decoded.signedDate,
+      "signedDate",
+    ),
+    expiresDate: requireNumber(
+      decoded.expiresDate,
+      "expiresDate",
+    ),
     revocationDate:
       typeof decoded.revocationDate === "number"
         ? decoded.revocationDate
         : null,
   };
-}
-
-async function verifyAcrossAppleEnvironments(
-  transactionId: string,
-) {
-  try {
-    return await fetchAndVerifyTransaction(
-      transactionId,
-      Environment.PRODUCTION,
-    );
-  } catch (error) {
-    if (!isTransactionNotFound(error)) {
-      throw error;
-    }
-
-    return await fetchAndVerifyTransaction(
-      transactionId,
-      Environment.SANDBOX,
-    );
-  }
 }
 
 Deno.serve(async (request) => {
@@ -342,14 +295,18 @@ Deno.serve(async (request) => {
         ? body.productId.trim()
         : "";
 
+    const signedTransaction =
+      typeof body?.signedTransaction === "string"
+        ? body.signedTransaction.trim()
+        : "";
+
     if (
       !transactionId ||
       transactionId.length > 128
     ) {
       return json(
         {
-          error:
-            "Invalid transaction identifier.",
+          error: "Invalid transaction identifier.",
         },
         400,
       );
@@ -362,23 +319,29 @@ Deno.serve(async (request) => {
     ) {
       return json(
         {
-          error:
-            "Unsupported membership product.",
+          error: "Unsupported membership product.",
         },
         400,
       );
     }
 
-    /*
-     * The client transaction ID is only a lookup hint.
-     *
-     * Entitlement authority begins only after Apple's
-     * signed transaction has been cryptographically
-     * verified.
-     */
+    if (
+      !signedTransaction ||
+      signedTransaction.length > 32768
+    ) {
+      return json(
+        {
+          error:
+            "Apple signed transaction data is required.",
+          code: "APPLE_SIGNED_TRANSACTION_REQUIRED",
+        },
+        400,
+      );
+    }
+
     const verified =
-      await verifyAcrossAppleEnvironments(
-        transactionId,
+      await verifySignedTransaction(
+        signedTransaction,
       );
 
     if (
@@ -453,13 +416,6 @@ Deno.serve(async (request) => {
       !isRevoked &&
       verified.expiresDate > now;
 
-    /*
-     * Transaction data alone is not used to invent
-     * billing-grace state.
-     *
-     * Build 29 lifecycle notifications/status handling
-     * will authoritatively establish grace_period.
-     */
     const entitlementStatus =
       isRevoked
         ? "revoked"
@@ -507,8 +463,14 @@ Deno.serve(async (request) => {
             verified.appAccountToken,
           p_entitlement_status:
             entitlementStatus,
-          p_purchase_date: new Date(verified.purchaseDate).toISOString(),
-          p_signed_date: new Date(verified.signedDate).toISOString(),
+          p_purchase_date:
+            new Date(
+              verified.purchaseDate,
+            ).toISOString(),
+          p_signed_date:
+            new Date(
+              verified.signedDate,
+            ).toISOString(),
           p_expires_at: expiresAt,
           p_revocation_date:
             revocationDate,
@@ -545,10 +507,6 @@ Deno.serve(async (request) => {
       environment: verified.environment,
     });
   } catch (error) {
-    /*
-     * Never return Apple credentials, JWS payloads,
-     * private-key material or raw server exceptions.
-     */
     console.error(
       "apple-subscription-verify failure",
       error instanceof Error

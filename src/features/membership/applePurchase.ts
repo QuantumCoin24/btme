@@ -83,9 +83,18 @@ async function verifyAndFinishPurchase(
     );
   }
 
+  const signedTransaction = purchase.purchaseToken?.trim();
+
+  if (!signedTransaction) {
+    throw new Error(
+      "Apple returned a membership purchase without signed transaction data.",
+    );
+  }
+
   const verification = await verifyAppleSubscription(
     transactionId,
     purchase.productId,
+    signedTransaction,
   );
 
   if (
