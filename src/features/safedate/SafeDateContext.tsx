@@ -7,6 +7,13 @@ import {
   useState,
 } from "react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import {
+  stopSafeDateBackgroundLocation,
+} from "./safeDateBackgroundLocation";
+import {
+  cancelSafeDateCheckInReminder,
+} from "./safeDateNotifications";
+
 
 export type SafeDateSessionStatus = "active" | "ended-by-me" | "ended";
 
@@ -217,6 +224,11 @@ export function SafeDateProvider({ children }: { children: ReactNode }) {
         if (error) {
           throw error;
         }
+
+        await Promise.allSettled([
+          stopSafeDateBackgroundLocation(),
+          cancelSafeDateCheckInReminder(cleanId),
+        ]);
 
         return await loadSessionForDatePlan(cleanId);
       } catch (error) {

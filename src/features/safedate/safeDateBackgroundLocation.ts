@@ -3,14 +3,16 @@ import * as TaskManager from "expo-task-manager";
 
 import { supabase } from "../../lib/supabase";
 
-const TASK_NAME = "btme-safedate-background-location";
+const TASK_NAME =
+  "btme-safedate-background-location";
+
+const STATE_KEY =
+  "btme:safedate:background-location:v1";
 
 type ActiveSafeDateBackgroundState = {
   datePlanId: string;
   expiresAt: string;
 };
-
-let activeState: ActiveSafeDateBackgroundState | null = null;
 
 function isExpired(expiresAt: string) {
   const timestamp = Date.parse(expiresAt);
@@ -18,6 +20,53 @@ function isExpired(expiresAt: string) {
   return (
     !Number.isFinite(timestamp) ||
     timestamp <= Date.now()
+  );
+}
+
+function readStoredState():
+  ActiveSafeDateBackgroundState | null {
+  try {
+    const raw =
+      globalThis.localStorage?.getItem(
+        STATE_KEY,
+      );
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as
+      Partial<ActiveSafeDateBackgroundState>;
+
+    if (
+      typeof parsed.datePlanId !== "string" ||
+      !parsed.datePlanId.trim() ||
+      typeof parsed.expiresAt !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      datePlanId: parsed.datePlanId,
+      expiresAt: parsed.expiresAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storeState(
+  state: ActiveSafeDateBackgroundState,
+) {
+  globalThis.localStorage?.setItem(
+    STATE_KEY,
+    JSON.stringify(state),
+  );
+}
+
+function clearStoredState() {
+  globalThis.localStorage?.removeItem(
+    STATE_KEY,
   );
 }
 
@@ -34,16 +83,27 @@ async function stopTaskIfRunning() {
   }
 }
 
+async function stopAndClear() {
+  await stopTaskIfRunning();
+  clearStoredState();
+}
+
 TaskManager.defineTask(
   TASK_NAME,
   async ({ data, error }) => {
-    if (error || !data || !activeState) {
+    if (error || !data) {
       return;
     }
 
-    if (isExpired(activeState.expiresAt)) {
+    const state = readStoredState();
+
+    if (!state) {
       await stopTaskIfRunning();
-      activeState = null;
+      return;
+    }
+
+    if (isExpired(state.expiresAt)) {
+      await stopAndClear();
       return;
     }
 
@@ -64,12 +124,27 @@ TaskManager.defineTask(
       return;
     }
 
-    try {
+    const { error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) {
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return;
+    }
+
+    const { error: rpcError } =
       await supabase.rpc(
         "record_my_safe_date_location",
         {
           p_date_plan_id:
-            activeState.datePlanId,
+            state.datePlanId,
           p_latitude:
             latest.coords.latitude,
           p_longitude:
@@ -82,9 +157,20 @@ TaskManager.defineTask(
             ).toISOString(),
         },
       );
-    } catch {
-      // A later OS location delivery provides
-      // the next bounded retry opportunity.
+
+    if (rpcError) {
+      const message =
+        rpcError.message.toLowerCase();
+
+      if (
+        message.includes("consent") ||
+        message.includes("expired") ||
+        message.includes("ended") ||
+        message.includes("closed") ||
+        message.includes("participant")
+      ) {
+        await stopAndClear();
+      }
     }
   },
 );
@@ -101,6 +187,14 @@ export async function startSafeDateBackgroundLocation(
   datePlanId: string,
   expiresAt: string,
 ) {
+  const cleanId = datePlanId.trim();
+
+  if (!cleanId) {
+    throw new Error(
+      "SafeDate date plan is required.",
+    );
+  }
+
   if (isExpired(expiresAt)) {
     throw new Error(
       "SafeDate location consent has expired.",
@@ -125,38 +219,74 @@ export async function startSafeDateBackgroundLocation(
     );
   }
 
-  activeState = {
-    datePlanId,
+  const state = {
+    datePlanId: cleanId,
     expiresAt,
   };
 
   await stopTaskIfRunning();
+  storeState(state);
 
-  await Location.startLocationUpdatesAsync(
-    TASK_NAME,
-    {
-      accuracy: Location.Accuracy.High,
-      distanceInterval: 50,
-      deferredUpdatesDistance: 100,
-      deferredUpdatesInterval: 60_000,
-      pausesUpdatesAutomatically: true,
-      showsBackgroundLocationIndicator: true,
-      foregroundService: {
-        notificationTitle:
-          "SafeDate™ protection active",
-        notificationBody:
-          "BTME™ location protection is active.",
+  try {
+    await Location.startLocationUpdatesAsync(
+      TASK_NAME,
+      {
+        accuracy: Location.Accuracy.High,
+        distanceInterval: 50,
+        deferredUpdatesDistance: 100,
+        deferredUpdatesInterval: 60_000,
+        pausesUpdatesAutomatically: true,
+        showsBackgroundLocationIndicator: true,
+        foregroundService: {
+          notificationTitle:
+            "SafeDate™ protection active",
+          notificationBody:
+            "BTME™ location protection is active.",
+        },
       },
-    },
-  );
+    );
+  } catch (error) {
+    clearStoredState();
+    throw error;
+  }
 }
 
 export async function stopSafeDateBackgroundLocation() {
-  await stopTaskIfRunning();
-  activeState = null;
+  await stopAndClear();
 }
 
 export async function isSafeDateBackgroundLocationActive() {
+  const state = readStoredState();
+
+  if (!state || isExpired(state.expiresAt)) {
+    await stopAndClear();
+    return false;
+  }
+
+  return Location.hasStartedLocationUpdatesAsync(
+    TASK_NAME,
+  );
+}
+
+export async function reconcileSafeDateBackgroundLocation(
+  datePlanId: string,
+  consentEnabled: boolean,
+  expiresAt: string | null,
+) {
+  const state = readStoredState();
+
+  if (
+    !consentEnabled ||
+    !expiresAt ||
+    isExpired(expiresAt) ||
+    !state ||
+    state.datePlanId !== datePlanId ||
+    state.expiresAt !== expiresAt
+  ) {
+    await stopAndClear();
+    return false;
+  }
+
   return Location.hasStartedLocationUpdatesAsync(
     TASK_NAME,
   );

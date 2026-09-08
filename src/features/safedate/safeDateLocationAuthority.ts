@@ -4,6 +4,10 @@ import {
   requestSafeDateForegroundLocationPermission,
 } from './safeDateDeviceLocation';
 import {
+  startSafeDateBackgroundLocation,
+  stopSafeDateBackgroundLocation,
+} from './safeDateBackgroundLocation';
+import {
   recordMySafeDateLocation,
   setMySafeDateLocationConsent,
 } from './safeDateProtection';
@@ -67,6 +71,30 @@ export async function enableMySafeDateLocationProtection(
     throw error;
   }
 
+  const expiresAt = new Date(
+    Date.now() + durationMinutes * 60_000,
+  ).toISOString();
+
+  try {
+    await startSafeDateBackgroundLocation(
+      datePlanId,
+      expiresAt,
+    );
+  } catch (error) {
+    try {
+      await setMySafeDateLocationConsent(
+        datePlanId,
+        false,
+        durationMinutes,
+      );
+    } catch {
+      // Preserve the background activation failure.
+    }
+
+    await stopSafeDateBackgroundLocation();
+    throw error;
+  }
+
   return {
     enabled: true,
     canAskAgain: permission.canAskAgain,
@@ -80,6 +108,8 @@ export async function disableMySafeDateLocationProtection(
     datePlanId,
     false,
   );
+
+  await stopSafeDateBackgroundLocation();
 }
 
 export async function recordCurrentSafeDateLocation(
