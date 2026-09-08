@@ -20,6 +20,10 @@ import {
   cancelSafeDateCheckInReminder,
   scheduleSafeDateCheckInReminder,
 } from './safeDateNotifications';
+import {
+  reconcileSafeDateBackgroundLocation,
+  stopSafeDateBackgroundLocation,
+} from './safeDateBackgroundLocation';
 
 export function useSafeDateProtection(
   datePlanId: string | undefined,
@@ -47,6 +51,12 @@ export function useSafeDateProtection(
 
   const refresh = useCallback(async () => {
     if (!datePlanId || !active) {
+      if (!active) {
+        await stopSafeDateBackgroundLocation().catch(
+          () => undefined,
+        );
+      }
+
       setProtection(null);
       setError(null);
       return null;
@@ -60,6 +70,12 @@ export function useSafeDateProtection(
         await loadMySafeDateProtection(
           datePlanId,
         );
+
+      await reconcileSafeDateBackgroundLocation(
+        datePlanId,
+        next.locationSharingEnabled,
+        next.locationSharingExpiresAt,
+      );
 
       setProtection(next);
       return next;

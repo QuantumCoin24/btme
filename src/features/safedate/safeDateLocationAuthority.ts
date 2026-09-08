@@ -8,6 +8,7 @@ import {
   stopSafeDateBackgroundLocation,
 } from './safeDateBackgroundLocation';
 import {
+  loadMySafeDateProtection,
   recordMySafeDateLocation,
   setMySafeDateLocationConsent,
 } from './safeDateProtection';
@@ -71,14 +72,35 @@ export async function enableMySafeDateLocationProtection(
     throw error;
   }
 
-  const expiresAt = new Date(
-    Date.now() + durationMinutes * 60_000,
-  ).toISOString();
+  const authoritativeProtection =
+    await loadMySafeDateProtection(datePlanId);
+
+  if (
+    !authoritativeProtection.locationSharingEnabled ||
+    !authoritativeProtection.locationSharingExpiresAt
+  ) {
+    await stopSafeDateBackgroundLocation();
+
+    try {
+      await setMySafeDateLocationConsent(
+        datePlanId,
+        false,
+        durationMinutes,
+      );
+    } catch {
+      // Server remains authoritative.
+    }
+
+    throw new Error(
+      'SafeDate location protection could not confirm server consent.',
+    );
+  }
+
 
   try {
     await startSafeDateBackgroundLocation(
       datePlanId,
-      expiresAt,
+      authoritativeProtection.locationSharingExpiresAt,
     );
   } catch (error) {
     try {

@@ -899,10 +899,10 @@ export default function SafeDateScreen() {
                   ) : null}
 
                   <Text style={styles.mutedText}>
-                    Trusted-contact alerts are prepared by BTME's
-                    server-side safety system. External delivery is
-                    only claimed once a supported delivery channel
-                    confirms it.
+                    Trusted contacts linked to BTME™ can receive
+                    SafeDate™ push alerts on registered devices.
+                    Precise location is not included in those alerts.
+                    BTME™ does not claim that an alert was seen.
                   </Text>
                 </View>
 
@@ -1237,22 +1237,18 @@ export default function SafeDateScreen() {
                   styles.safetyBody
                 }
               >
-                SafeDate™ currently
-                provides server-backed
-                independent session
-                control, private
-                check-ins, a private
-                assistance state and
-                safe-arrival
-                confirmation. It does
-                uses opt-in foreground
-                location capture when you
-                enable it. It does not
-                currently provide continuous
-                GPS tracking, confirmed
-                trusted-contact delivery,
-                background monitoring or
-                emergency-service integration.
+                SafeDate™ provides server-backed
+                independent session control, private
+                check-ins, assistance state and
+                safe-arrival confirmation. Location
+                protection is explicitly opt-in and
+                can continue in the background while
+                enabled. Server consent controls its
+                expiry. Precise location remains
+                private safety data and is not shown
+                to your date or included in trusted-
+                contact alerts. SafeDate™ does not
+                contact emergency services for you.
               </Text>
             </View>
 
@@ -1326,10 +1322,11 @@ export default function SafeDateScreen() {
           }
         >
           SAFEDATE™ · SERVER-BACKED ·
-          PRIVATE CHECK-INS · OPT-IN
-          LOCATION CAPTURE · INDEPENDENT
-          END CONTROL · NO CONTINUOUS GPS ·
-          NO EMERGENCY-SERVICE INTEGRATION
+          PRIVATE CHECK-INS · EXPLICIT
+          LOCATION CONSENT · BACKGROUND
+          PROTECTION WHILE ENABLED ·
+          INDEPENDENT END CONTROL ·
+          NO EMERGENCY-SERVICE DISPATCH
         </Text>
       </ScrollView>
     </View>
