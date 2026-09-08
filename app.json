@@ -46,7 +46,8 @@
           "cameraPermission": false
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      "expo-notifications"
     ],
     "scheme": "btme",
     "experiments": {

@@ -15,6 +15,10 @@ import {
   safeDateProtectionErrorMessage,
   setMySafeDateLocationConsent,
 } from './safeDateProtection';
+import {
+  cancelSafeDateCheckInReminder,
+  scheduleSafeDateCheckInReminder,
+} from './safeDateNotifications';
 
 export function useSafeDateProtection(
   datePlanId: string | undefined,
@@ -111,19 +115,61 @@ export function useSafeDateProtection(
   );
 
   const checkIn = useCallback(
-    () => mutate(checkInMySafeDate),
-    [mutate],
+    async () => {
+      const succeeded =
+        await mutate(checkInMySafeDate);
+
+      if (
+        succeeded &&
+        datePlanId &&
+        protection?.checkInIntervalMinutes
+      ) {
+        await scheduleSafeDateCheckInReminder(
+          datePlanId,
+          protection.checkInIntervalMinutes,
+        );
+      }
+
+      return succeeded;
+    },
+    [
+      datePlanId,
+      mutate,
+      protection?.checkInIntervalMinutes,
+    ],
   );
 
   const setCheckInInterval = useCallback(
-    (minutes: number | null) =>
-      mutate((id) =>
+    async (minutes: number | null) => {
+      if (!datePlanId) {
+        return false;
+      }
+
+      const succeeded = await mutate((id) =>
         configureMySafeDateCheckIn(
           id,
           minutes,
         ),
-      ),
-    [mutate],
+      );
+
+      if (!succeeded) {
+        return false;
+      }
+
+      if (minutes === null) {
+        await cancelSafeDateCheckInReminder(
+          datePlanId,
+        );
+      } else {
+        await scheduleSafeDateCheckInReminder(
+          datePlanId,
+          minutes,
+        );
+      }
+
+      return true;
+    },
+    [datePlanId, mutate],
   );
 
   const requestAssistance = useCallback(
