@@ -1,5 +1,6 @@
 import {
-  Pressable,
+
+  Alert,Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,9 @@ import {
   radius,
   spacing,
 } from '../../src/theme/tokens';
+import {
+  deleteMyAccount,
+} from '../../src/features/account/deleteAccount';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -159,16 +163,14 @@ export default function SettingsScreen() {
           <Text style={styles.cardEyebrow}>
             PRIVACY & DATA
           </Text>
-
           <Text style={styles.cardTitle}>
-            Production controls still required.
+            Your privacy matters.
           </Text>
-
           <Text style={styles.cardBody}>
-            Data export, retention, privacy choices
-            and server-side account deletion will be
-            connected during production
-            infrastructure work.
+            BTME protects your profile and safety data
+            behind your authenticated account. You can
+            permanently delete your account and
+            associated BTME data below.
           </Text>
         </View>
 
@@ -201,17 +203,72 @@ export default function SettingsScreen() {
           <Text style={styles.dangerEyebrow}>
             ACCOUNT DELETION
           </Text>
-
           <Text style={styles.cardTitle}>
-            Deletion is not connected yet.
+            Permanently delete account
+          </Text>
+          <Text style={styles.cardBody}>
+            Delete your BTME account, profile,
+            membership record, connections, SafeDate
+            records and private profile media. This
+            action cannot be undone.
           </Text>
 
-          <Text style={styles.cardBody}>
-            This preview does not delete local or
-            remote data. Production account deletion
-            must remove the member through the real
-            backend and meet store requirements.
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Delete account permanently"
+            onPress={() => {
+              Alert.alert(
+                'Delete BTME account?',
+                'This permanently deletes your BTME account and associated data. This cannot be undone.',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'Delete account',
+                    style: 'destructive',
+                    onPress: () => {
+                      Alert.alert(
+                        'Final confirmation',
+                        'Are you absolutely sure? Your account cannot be recovered after deletion.',
+                        [
+                          {
+                            text: 'Keep account',
+                            style: 'cancel',
+                          },
+                          {
+                            text: 'Delete permanently',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await deleteMyAccount();
+                                router.replace(
+                                  '/welcome' as never
+                                );
+                              } catch (error) {
+                                Alert.alert(
+                                  'Account deletion failed',
+                                  error instanceof Error
+                                    ? error.message
+                                    : 'BTME could not delete your account. Please try again.'
+                                );
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    },
+                  },
+                ]
+              );
+            }}
+            style={styles.dangerButton}
+          >
+            <Text style={styles.dangerButtonText}>
+              Delete account
+            </Text>
+          </Pressable>
         </View>
 
         <Text style={styles.footer}>
@@ -338,6 +395,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.7,
+  },
+  dangerButton: {
+    marginTop: spacing.md,
+    minHeight: 52,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  dangerButtonText: {
+    color: colors.danger,
+    fontSize: 16,
+    fontWeight: '700',
   },
   dangerEyebrow: {
     color: colors.danger,
