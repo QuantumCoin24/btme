@@ -6,6 +6,7 @@ import {
   Text,
   TextInput,
   View,
+  Share,
 } from "react-native";
 import {
   useLocalSearchParams,
@@ -21,6 +22,7 @@ import {
 } from "../../../src/features/safedate/safeDateLocationAuthority";
 import {
   addMySafeDateTrustedContact,
+  createMySafeDateTrustedContactInvite,
   getMyActiveSafeDateTrustedContacts,
   getMySafeDateTrustedContacts,
   revokeMySafeDateTrustedContact,
@@ -332,11 +334,18 @@ export default function SafeDateScreen() {
           email: trustedContactEmail.trim() || null,
         });
 
-      await setMySafeDateTrustedContactEnabled(
-        datePlanId,
-        contactId,
-        true,
-      );
+      const token =
+        await createMySafeDateTrustedContactInvite(
+          contactId,
+        );
+
+      await Share.share({
+        title: "BTME™ SafeDate™ trusted contact",
+        message:
+          "Join me as a BTME™ SafeDate™ trusted contact. " +
+          "Open Better Than My Ex™ and accept this invite:\n\n" +
+          `betterthanmyex://trusted-contact-invite?token=${token}`,
+      });
 
       setTrustedContactName("");
       setTrustedContactPhone("");
@@ -351,6 +360,42 @@ export default function SafeDateScreen() {
         caught instanceof Error
           ? caught.message
           : "BTME could not add your trusted contact.",
+      );
+    } finally {
+      setTrustedContactMutating(false);
+    }
+  }
+
+  async function handleInviteTrustedContact(
+    trustedContactId: string,
+  ) {
+    if (trustedContactMutating) {
+      return;
+    }
+
+    setTrustedContactMutating(true);
+    setTrustedContactError(null);
+
+    try {
+      const token =
+        await createMySafeDateTrustedContactInvite(
+          trustedContactId,
+        );
+
+      await Share.share({
+        title: "BTME™ SafeDate™ trusted contact",
+        message:
+          "Join me as a BTME™ SafeDate™ trusted contact. " +
+          "Open Better Than My Ex™ and accept this invite:\n\n" +
+          `betterthanmyex://trusted-contact-invite?token=${token}`,
+      });
+
+      await refreshTrustedContacts();
+    } catch (caught) {
+      setTrustedContactError(
+        caught instanceof Error
+          ? caught.message
+          : "BTME could not create the trusted-contact invite.",
       );
     } finally {
       setTrustedContactMutating(false);
@@ -771,6 +816,7 @@ export default function SafeDateScreen() {
                   {trustedContacts.map((contact) => {
                     const enabled =
                       activeTrustedContactIds.has(contact.id);
+                    const linked = contact.linked;
 
                     return (
                       <View
@@ -786,7 +832,35 @@ export default function SafeDateScreen() {
                               contact.email ??
                               "Private trusted contact"}
                           </Text>
+                          <Text style={styles.controlBody}>
+                            {linked
+                              ? "BTME™ linked"
+                              : "Invite required"}
+                          </Text>
                         </View>
+
+                        {!linked ? (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`Invite ${contact.name} to BTME SafeDate`}
+                            disabled={trustedContactMutating}
+                            onPress={() =>
+                              void handleInviteTrustedContact(
+                                contact.id,
+                              )
+                            }
+                            style={({ pressed }) => [
+                              styles.trustedContactToggle,
+                              pressed &&
+                                !trustedContactMutating &&
+                                styles.buttonPressed,
+                            ]}
+                          >
+                            <Text style={styles.trustedContactToggleText}>
+                              INVITE
+                            </Text>
+                          </Pressable>
+                        ) : null}
 
                         <Pressable
                           accessibilityRole="button"
@@ -795,7 +869,10 @@ export default function SafeDateScreen() {
                               ? `Disable ${contact.name} for this SafeDate`
                               : `Enable ${contact.name} for this SafeDate`
                           }
-                          disabled={trustedContactMutating}
+                          disabled={
+                            trustedContactMutating ||
+                            !linked
+                          }
                           onPress={() =>
                             void handleToggleTrustedContact(
                               contact.id,
@@ -805,12 +882,20 @@ export default function SafeDateScreen() {
                             styles.trustedContactToggle,
                             enabled &&
                               styles.trustedContactToggleActive,
+                            (trustedContactMutating || !linked) &&
+                              styles.disabledButton,
                             pressed &&
+                              !trustedContactMutating &&
+                              linked &&
                               styles.buttonPressed,
                           ]}
                         >
                           <Text style={styles.trustedContactToggleText}>
-                            {enabled ? "ACTIVE" : "OFF"}
+                            {!linked
+                              ? "LINK FIRST"
+                              : enabled
+                                ? "ACTIVE"
+                                : "OFF"}
                           </Text>
                         </Pressable>
 

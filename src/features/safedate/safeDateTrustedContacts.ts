@@ -6,6 +6,8 @@ export type SafeDateTrustedContact = {
   phone: string | null;
   email: string | null;
   createdAt: string;
+  linked: boolean;
+  linkedAt: string | null;
 };
 
 export type ActiveSafeDateTrustedContact = {
@@ -58,13 +60,31 @@ export async function getMySafeDateTrustedContacts(): Promise<
     );
   }
 
-  return ((data ?? []) as TrustedContactRow[]).map((row) => ({
-    id: row.id,
-    name: row.name,
-    phone: row.phone,
-    email: row.email,
-    createdAt: row.created_at,
-  }));
+  const contacts =
+    ((data ?? []) as TrustedContactRow[]).map((row) => ({
+      id: row.id,
+      name: row.name,
+      phone: row.phone,
+      email: row.email,
+      createdAt: row.created_at,
+      linked: false,
+      linkedAt: null as string | null,
+    }));
+
+  return Promise.all(
+    contacts.map(async (contact) => {
+      const state =
+        await getMySafeDateTrustedContactLinkState(
+          contact.id,
+        );
+
+      return {
+        ...contact,
+        linked: state.linked,
+        linkedAt: state.linkedAt,
+      };
+    }),
+  );
 }
 
 export async function addMySafeDateTrustedContact(input: {
