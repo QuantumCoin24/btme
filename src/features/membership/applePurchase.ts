@@ -9,8 +9,7 @@ import {
   purchaseUpdatedListener,
   requestPurchase,
   type Purchase,
-  restorePurchases,
-} from "expo-iap";
+  } from "expo-iap";
 
 import {
   APPLE_PREMIUM_PRODUCT_IDS,
@@ -147,9 +146,6 @@ export async function startAppleMembershipPurchase(
 
 export async function restoreAppleMembershipPurchases() {
   requireAppleStorePlatform();
-
-  await restorePurchases();
-
   const purchases = await getAvailablePurchases();
 
   const relevant = purchases
