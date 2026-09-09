@@ -7,6 +7,10 @@ import {
   supabase,
 } from "../../lib/supabase";
 
+import {
+  getSafeDateInstallationCredential,
+} from "./safeDateInstallation";
+
 function projectId() {
   const value =
     Constants.expoConfig?.extra?.eas?.projectId ??
@@ -56,16 +60,25 @@ export async function registerMySafeDatePushDevice() {
     );
   }
 
-  const token =
-    await Notifications.getExpoPushTokenAsync({
+  const [
+    token,
+    installation,
+  ] = await Promise.all([
+    Notifications.getExpoPushTokenAsync({
       projectId: id,
-    });
+    }),
+    getSafeDateInstallationCredential(),
+  ]);
 
   const { error } = await supabase.rpc(
     "register_my_safe_date_push_token",
     {
       p_expo_push_token: token.data,
-    },
+      p_installation_id:
+        installation.installationId,
+      p_installation_secret:
+        installation.installationSecret,
+    } as never,
   );
 
   if (error) {
@@ -80,8 +93,17 @@ export async function disableMySafeDatePushDevices() {
     return;
   }
 
+  const installation =
+    await getSafeDateInstallationCredential();
+
   const { error } = await supabase.rpc(
     "disable_my_safe_date_push_tokens",
+    {
+      p_installation_id:
+        installation.installationId,
+      p_installation_secret:
+        installation.installationSecret,
+    } as never,
   );
 
   if (error) {

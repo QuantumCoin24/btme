@@ -2,6 +2,7 @@ import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 
 import { supabase } from "../../lib/supabase";
+import { getSafeDateInstallationRpcArgs } from "./safeDateInstallation";
 
 const TASK_NAME =
   "btme-safedate-background-location";
@@ -139,6 +140,9 @@ TaskManager.defineTask(
       return;
     }
 
+    const installation =
+      await getSafeDateInstallationRpcArgs();
+
     const { error: rpcError } =
       await supabase.rpc(
         "record_my_safe_date_location",
@@ -155,6 +159,7 @@ TaskManager.defineTask(
             new Date(
               latest.timestamp,
             ).toISOString(),
+          ...installation,
         },
       );
 

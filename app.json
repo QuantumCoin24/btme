@@ -48,7 +48,8 @@
         }
       ],
       "expo-iap",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-secure-store"
     ],
     "scheme": "btme",
     "experiments": {

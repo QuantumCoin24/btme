@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { isSupabaseConfigured, supabase } from "../../lib/supabase";
+import { getSafeDateInstallationRpcArgs } from "./safeDateInstallation";
 import {
   stopSafeDateBackgroundLocation,
 } from "./safeDateBackgroundLocation";
@@ -186,9 +187,16 @@ export function SafeDateProvider({ children }: { children: ReactNode }) {
       setSafeDateError(null);
 
       try {
-        const { error } = await supabase.rpc("start_safe_date", {
-          p_date_plan_id: cleanId,
-        });
+        const installation =
+          await getSafeDateInstallationRpcArgs();
+
+        const { error } = await supabase.rpc(
+          "start_safe_date" as never,
+          {
+            p_date_plan_id: cleanId,
+            ...installation,
+          } as never,
+        );
 
         if (error) {
           throw error;
@@ -217,9 +225,16 @@ export function SafeDateProvider({ children }: { children: ReactNode }) {
       setSafeDateError(null);
 
       try {
-        const { error } = await supabase.rpc("end_my_safe_date", {
-          p_date_plan_id: cleanId,
-        });
+        const installation =
+          await getSafeDateInstallationRpcArgs();
+
+        const { error } = await supabase.rpc(
+          "end_my_safe_date" as never,
+          {
+            p_date_plan_id: cleanId,
+            ...installation,
+          } as never,
+        );
 
         if (error) {
           throw error;

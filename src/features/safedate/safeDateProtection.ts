@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { getSafeDateInstallationRpcArgs } from './safeDateInstallation';
 
 export type SafeDateProtection = {
   safeDateSessionId: string;
@@ -70,9 +71,15 @@ async function invokeVoid(
   functionName: string,
   args: Record<string, unknown>,
 ) {
+  const installation =
+    await getSafeDateInstallationRpcArgs();
+
   const { error } = await supabase.rpc(
     functionName as never,
-    args as never,
+    {
+      ...args,
+      ...installation,
+    } as never,
   );
 
   if (error) {
