@@ -1,5 +1,6 @@
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { AppShellScreen } from "../../src/components/AppShellScreen";
 import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
 import { colors, radius, spacing } from "../../src/theme/tokens";
@@ -7,7 +8,13 @@ import { colors, radius, spacing } from "../../src/theme/tokens";
 export default function ConnectionsScreen() {
   const router = useRouter();
 
-  const { connections } = useDiscovery();
+  const { connections, refreshConnections } = useDiscovery();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshConnections();
+    }, [refreshConnections]),
+  );
 
   return (
     <AppShellScreen
