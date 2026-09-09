@@ -20,6 +20,10 @@ import {
 } from '../../lib/supabase'
 import { stopSafeDateBackgroundLocation } from '../safedate/safeDateBackgroundLocation'
 import { disableMySafeDatePushDevices } from '../safedate/safeDatePush'
+import {
+  clearSafeDateInstallationCredential,
+  revokeSafeDateInstallation,
+} from '../safedate/safeDateInstallation'
 
 
 type PasswordAuthInput = {
@@ -323,10 +327,17 @@ export function AuthProvider({
       signOut: async () => {
         requireConfiguration()
 
-        await Promise.allSettled([
-          stopSafeDateBackgroundLocation(),
-          disableMySafeDatePushDevices(),
-        ])
+        await stopSafeDateBackgroundLocation()
+          .catch(() => undefined)
+
+        await disableMySafeDatePushDevices()
+          .catch(() => undefined)
+
+        await revokeSafeDateInstallation()
+          .catch(() => undefined)
+
+        await clearSafeDateInstallationCredential()
+          .catch(() => undefined)
 
         const { error } =
           await supabase.auth.signOut()
@@ -335,6 +346,7 @@ export function AuthProvider({
           throw error
         }
       },
+
     }),
     [initialized, session]
   )

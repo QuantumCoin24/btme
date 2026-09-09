@@ -50,8 +50,8 @@ Promise<SafeDateInstallationCredential> {
   };
 }
 
-export async function getSafeDateInstallationCredential():
-Promise<SafeDateInstallationCredential> {
+export async function readSafeDateInstallationCredential():
+Promise<SafeDateInstallationCredential | null> {
   const [
     installationId,
     installationSecret,
@@ -65,18 +65,29 @@ Promise<SafeDateInstallationCredential> {
   ]);
 
   if (
-    installationId &&
-    installationSecret
+    !installationId ||
+    !installationSecret
   ) {
-    return {
-      installationId,
-      installationSecret,
-    };
+    return null;
+  }
+
+  return {
+    installationId,
+    installationSecret,
+  };
+}
+
+export async function getSafeDateInstallationCredential():
+Promise<SafeDateInstallationCredential> {
+  const existing =
+    await readSafeDateInstallationCredential();
+
+  if (existing) {
+    return existing;
   }
 
   return createCredential();
 }
-
 
 export async function ensureSafeDateInstallationRegistered() {
   if (!isSupabaseConfigured) {
@@ -98,19 +109,6 @@ export async function ensureSafeDateInstallationRegistered() {
     );
   }
 
-  const { error } = await supabase.rpc(
-    "register_my_safe_date_installation" as never,
-    {
-      p_installation_id:
-        credential.installationId,
-      p_installation_secret:
-        credential.installationSecret,
-    } as never,
-  );
-
-  if (error) {
-    throw error;
-  }
   return credential;
 }
 
@@ -124,6 +122,33 @@ export async function getSafeDateInstallationRpcArgs() {
     p_installation_secret:
       credential.installationSecret,
   };
+}
+
+export async function revokeSafeDateInstallation() {
+  if (!isSupabaseConfigured) {
+    return;
+  }
+
+  const credential =
+    await readSafeDateInstallationCredential();
+
+  if (!credential) {
+    return;
+  }
+
+  const { error } = await supabase.rpc(
+    "revoke_my_safe_date_installation" as never,
+    {
+      p_installation_id:
+        credential.installationId,
+      p_installation_secret:
+        credential.installationSecret,
+    } as never,
+  );
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function clearSafeDateInstallationCredential() {

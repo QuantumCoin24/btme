@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { clearSafeDateInstallationCredential } from '../safedate/safeDateInstallation'
 
 type DeleteAccountResponse = {
   deleted?: boolean
@@ -39,6 +40,9 @@ export async function deleteMyAccount() {
         'BTME could not confirm account deletion.'
     )
   }
+
+  await clearSafeDateInstallationCredential()
+    .catch(() => undefined)
 
   await supabase.auth.signOut({
     scope: 'local',

@@ -9,6 +9,7 @@ import {
 
 import {
   getSafeDateInstallationCredential,
+  readSafeDateInstallationCredential,
 } from "./safeDateInstallation";
 
 function projectId() {
@@ -94,7 +95,11 @@ export async function disableMySafeDatePushDevices() {
   }
 
   const installation =
-    await getSafeDateInstallationCredential();
+    await readSafeDateInstallationCredential();
+
+  if (!installation) {
+    return;
+  }
 
   const { error } = await supabase.rpc(
     "disable_my_safe_date_push_tokens",
