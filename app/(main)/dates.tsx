@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback } from "react";
 import { AppShellScreen } from "../../src/components/AppShellScreen";
 import { useDiscovery } from "../../src/features/discovery/DiscoveryContext";
 import { useFeedback } from "../../src/features/feedback/FeedbackContext";
@@ -8,8 +9,14 @@ import { colors, radius, spacing } from "../../src/theme/tokens";
 export default function DatesScreen() {
   const router = useRouter();
 
-  const { datePlans, getConnection } = useDiscovery();
+  const { datePlans, getConnection, refreshDatePlans } = useDiscovery();
   const { getReflectionForDatePlan } = useFeedback();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshDatePlans();
+    }, [refreshDatePlans]),
+  );
 
   return (
     <AppShellScreen
