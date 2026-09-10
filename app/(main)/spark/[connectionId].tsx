@@ -8,6 +8,9 @@ import {
   TextInput,
   View,
 } from "react-native";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDiscovery } from "../../../src/features/discovery/DiscoveryContext";
@@ -72,6 +75,16 @@ export default function SparkScreen() {
   const [dateTime, setDateTime] = useState("");
 
   const [datePlace, setDatePlace] = useState("");
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [datePlanError, setDatePlanError] = useState<string | null>(null);
 
   const [datePlanSaved, setDatePlanSaved] = useState(false);
 
@@ -153,14 +166,88 @@ export default function SparkScreen() {
 
   const canSaveDate =
     Boolean(connection) &&
-    dateDay.trim().length > 0 &&
-    dateTime.trim().length > 0 &&
+    Boolean(selectedDate) &&
+    Boolean(selectedTime) &&
     datePlace.trim().length > 0;
+
+  function formatDateForDisplay(value: Date | null) {
+    if (!value) {
+      return "Choose date";
+    }
+
+    return value.toLocaleDateString(undefined, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
+  }
+
+  function formatTimeForDisplay(value: Date | null) {
+    if (!value) {
+      return "Choose time";
+    }
+
+    return value.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function handleDateChange(
+    event: DateTimePickerEvent,
+    value?: Date,
+  ) {
+    if (Platform.OS !== "ios") {
+      setShowDatePicker(false);
+    }
+
+    if (event.type === "dismissed" || !value) {
+      return;
+    }
+
+    setSelectedDate(value);
+
+    setDateDay(
+      [
+        value.getFullYear(),
+        String(value.getMonth() + 1).padStart(2, "0"),
+        String(value.getDate()).padStart(2, "0"),
+      ].join("-"),
+    );
+
+    setDatePlanError(null);
+  }
+
+  function handleTimeChange(
+    event: DateTimePickerEvent,
+    value?: Date,
+  ) {
+    if (Platform.OS !== "ios") {
+      setShowTimePicker(false);
+    }
+
+    if (event.type === "dismissed" || !value) {
+      return;
+    }
+
+    setSelectedTime(value);
+
+    setDateTime(
+      `${String(value.getHours()).padStart(2, "0")}:${String(
+        value.getMinutes(),
+      ).padStart(2, "0")}`,
+    );
+
+    setDatePlanError(null);
+  }
 
   async function handleSaveDate() {
     if (!canSaveDate) {
+      setDatePlanError("Choose a date, time and place.");
       return;
     }
+
+    setDatePlanError(null);
 
     const createdPlan = await createDatePlan(
       resolvedConnectionId,
@@ -170,6 +257,9 @@ export default function SparkScreen() {
     );
 
     if (!createdPlan) {
+      setDatePlanError(
+        "We couldn't save this date plan. Please try again.",
+      );
       return;
     }
 
@@ -178,6 +268,11 @@ export default function SparkScreen() {
     setDateDay("");
     setDateTime("");
     setDatePlace("");
+    setSelectedDate(null);
+    setSelectedTime(null);
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    setDatePlanError(null);
   }
 
   if (!connection) {
@@ -383,29 +478,136 @@ export default function SparkScreen() {
 
           {planningDate ? (
             <View style={styles.dateForm}>
-              <TextInput
-                value={dateDay}
-                onChangeText={setDateDay}
-                placeholder="Day"
-                placeholderTextColor={colors.textMuted}
-                style={styles.dateInput}
-              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Choose date"
+                onPress={() => {
+                  setShowTimePicker(false);
+                  setShowDatePicker((current) => !current);
+                  setDatePlanError(null);
+                }}
+                style={({ pressed }) => [
+                  styles.dateInput,
+                  styles.datePickerButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.datePickerText,
+                    !selectedDate &&
+                      styles.datePickerPlaceholder,
+                  ]}
+                >
+                  {formatDateForDisplay(selectedDate)}
+                </Text>
+              </Pressable>
 
-              <TextInput
-                value={dateTime}
-                onChangeText={setDateTime}
-                placeholder="Time"
-                placeholderTextColor={colors.textMuted}
-                style={styles.dateInput}
-              />
+              {showDatePicker ? (
+                <View style={styles.datePickerPanel}>
+                  <DateTimePicker
+                    value={selectedDate ?? new Date()}
+                    mode="date"
+                    display={
+                      Platform.OS === "ios"
+                        ? "inline"
+                        : "default"
+                    }
+                    minimumDate={new Date()}
+                    onChange={handleDateChange}
+                  />
+
+                  {Platform.OS === "ios" ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Done choosing date"
+                      onPress={() => setShowDatePicker(false)}
+                      style={({ pressed }) => [
+                        styles.pickerDoneButton,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.pickerDoneText}>
+                        Done
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Choose time"
+                onPress={() => {
+                  setShowDatePicker(false);
+                  setShowTimePicker((current) => !current);
+                  setDatePlanError(null);
+                }}
+                style={({ pressed }) => [
+                  styles.dateInput,
+                  styles.datePickerButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.datePickerText,
+                    !selectedTime &&
+                      styles.datePickerPlaceholder,
+                  ]}
+                >
+                  {formatTimeForDisplay(selectedTime)}
+                </Text>
+              </Pressable>
+
+              {showTimePicker ? (
+                <View style={styles.datePickerPanel}>
+                  <DateTimePicker
+                    value={selectedTime ?? new Date()}
+                    mode="time"
+                    display={
+                      Platform.OS === "ios"
+                        ? "spinner"
+                        : "default"
+                    }
+                    onChange={handleTimeChange}
+                  />
+
+                  {Platform.OS === "ios" ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Done choosing time"
+                      onPress={() => setShowTimePicker(false)}
+                      style={({ pressed }) => [
+                        styles.pickerDoneButton,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={styles.pickerDoneText}>
+                        Done
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
 
               <TextInput
                 value={datePlace}
-                onChangeText={setDatePlace}
+                onChangeText={(value) => {
+                  setDatePlace(value);
+                  setDatePlanError(null);
+                }}
                 placeholder="Place"
                 placeholderTextColor={colors.textMuted}
                 style={styles.dateInput}
+                returnKeyType="done"
               />
+
+              {datePlanError ? (
+                <Text style={styles.datePlanError}>
+                  {datePlanError}
+                </Text>
+              ) : null}
 
               <Pressable
                 accessibilityRole="button"
@@ -735,6 +937,46 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.background,
     fontSize: 14,
+  },
+  datePickerButton: {
+    justifyContent: "center",
+  },
+  datePickerText: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  datePickerPlaceholder: {
+    color: colors.textMuted,
+  },
+  datePickerPanel: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    overflow: "hidden",
+  },
+  pickerDoneButton: {
+    minHeight: 40,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerDoneText: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  datePlanError: {
+    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "700",
   },
   primaryButton: {
     minHeight: 48,
