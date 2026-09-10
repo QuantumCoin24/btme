@@ -7,10 +7,10 @@ import {
 } from "../../lib/supabase";
 
 const INSTALLATION_ID_KEY =
-  "btme:safedate:installation-id:v1";
+  "btme.safedate.installation-id.v1";
 
 const INSTALLATION_SECRET_KEY =
-  "btme:safedate:installation-secret:v1";
+  "btme.safedate.installation-secret.v1";
 export type SafeDateInstallationCredential = {
   installationId: string;
   installationSecret: string;
@@ -90,26 +90,63 @@ Promise<SafeDateInstallationCredential> {
 }
 
 export async function ensureSafeDateInstallationRegistered() {
+
   if (!isSupabaseConfigured) {
+
     throw new Error(
+
       "SafeDate installation authority is unavailable.",
+
     );
+
   }
 
   const credential =
+
     await getSafeDateInstallationCredential();
 
   const {
+
     data: { session },
+
   } = await supabase.auth.getSession();
 
   if (!session) {
+
     throw new Error(
+
       "SafeDate installation registration requires authentication.",
+
     );
+
+  }
+
+  const { error } = await supabase.rpc(
+
+    "register_my_safe_date_installation" as never,
+
+    {
+
+      p_installation_id:
+
+        credential.installationId,
+
+      p_installation_secret:
+
+        credential.installationSecret,
+
+    } as never,
+
+  );
+
+  if (error) {
+
+    throw error;
+
   }
 
   return credential;
+
 }
 
 export async function getSafeDateInstallationRpcArgs() {
