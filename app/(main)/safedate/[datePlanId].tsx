@@ -17,6 +17,12 @@ import { useDiscovery } from "../../../src/features/discovery/DiscoveryContext";
 import { useSafeDate } from "../../../src/features/safedate/SafeDateContext";
 import { useSafeDateProtection } from "../../../src/features/safedate/useSafeDateProtection";
 import {
+  loadMySafeDateGuardianResponse,
+  requestMySafeDateGuardianAssistance,
+  resolveMySafeDateGuardianResponse,
+  safeDateGuardianErrorMessage,
+} from "../../../src/features/safedate/safeDateGuardian";
+import {
   disableMySafeDateLocationProtection,
   enableMySafeDateLocationProtection,
 } from "../../../src/features/safedate/safeDateLocationAuthority";
@@ -71,6 +77,12 @@ export default function SafeDateScreen() {
   const [trustedContactMutating, setTrustedContactMutating] =
     useState(false);
   const [trustedContactError, setTrustedContactError] =
+    useState<string | null>(null);
+  const [guardianMutating, setGuardianMutating] =
+    useState(false);
+  const [guardianEscalationId, setGuardianEscalationId] =
+    useState<string | null>(null);
+  const [guardianError, setGuardianError] =
     useState<string | null>(null);
 
   const {
@@ -233,7 +245,112 @@ export default function SafeDateScreen() {
   const protectionBusy =
     protectionLoading ||
     protectionMutating ||
-    locationMutating;
+    locationMutating ||
+    guardianMutating;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateGuardianResponse() {
+      if (
+        !datePlanId ||
+        !protectionActive
+      ) {
+        if (!cancelled) {
+          setGuardianEscalationId(null);
+          setGuardianError(null);
+        }
+
+        return;
+      }
+
+      try {
+        const response =
+          await loadMySafeDateGuardianResponse(
+            datePlanId,
+          );
+
+        if (!cancelled) {
+          setGuardianEscalationId(
+            response?.escalationId ?? null,
+          );
+          setGuardianError(null);
+        }
+      } catch (caught) {
+        if (!cancelled) {
+          setGuardianError(
+            safeDateGuardianErrorMessage(
+              caught,
+            ),
+          );
+        }
+      }
+    }
+
+    void hydrateGuardianResponse();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    datePlanId,
+    protectionActive,
+  ]);
+
+  async function handleGuardianAssistance() {
+    if (
+      !datePlanId ||
+      !protectionActive ||
+      guardianMutating
+    ) {
+      return;
+    }
+
+    setGuardianMutating(true);
+    setGuardianError(null);
+
+    try {
+      const escalationId =
+        await requestMySafeDateGuardianAssistance(
+          datePlanId,
+        );
+
+      setGuardianEscalationId(escalationId);
+    } catch (caught) {
+      setGuardianError(
+        safeDateGuardianErrorMessage(caught),
+      );
+    } finally {
+      setGuardianMutating(false);
+    }
+  }
+
+  async function handleResolveGuardian() {
+    if (
+      !datePlanId ||
+      !guardianEscalationId ||
+      guardianMutating
+    ) {
+      return;
+    }
+
+    setGuardianMutating(true);
+    setGuardianError(null);
+
+    try {
+      await resolveMySafeDateGuardianResponse(
+        datePlanId,
+      );
+
+      setGuardianEscalationId(null);
+    } catch (caught) {
+      setGuardianError(
+        safeDateGuardianErrorMessage(caught),
+      );
+    } finally {
+      setGuardianMutating(false);
+    }
+  }
 
   async function handleLocationProtection() {
     if (!datePlanId || locationMutating) {
@@ -1165,6 +1282,98 @@ export default function SafeDateScreen() {
                   </Text>
                 ) : null}
 
+                <View
+                  style={styles.guardianSection}
+                >
+                  <Text
+                    style={styles.guardianEyebrow}
+                  >
+                    SAFEDATE™ GUARDIAN
+                  </Text>
+
+                  <Text
+                    style={styles.guardianTitle}
+                  >
+                    Private escalation.
+                  </Text>
+
+                  <Text
+                    style={styles.guardianBody}
+                  >
+                    Guardian is a separate
+                    escalation pathway for your
+                    side of SafeDate™. It does not
+                    notify your date, enable
+                    location sharing, or claim to
+                    contact emergency services.
+                  </Text>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      guardianEscalationId
+                        ? "Resolve SafeDate Guardian escalation"
+                        : "Request SafeDate Guardian assistance"
+                    }
+                    accessibilityState={{
+                      disabled: protectionBusy,
+                      selected:
+                        Boolean(
+                          guardianEscalationId,
+                        ),
+                    }}
+                    disabled={protectionBusy}
+                    onPress={() =>
+                      guardianEscalationId
+                        ? void handleResolveGuardian()
+                        : void handleGuardianAssistance()
+                    }
+                    style={({ pressed }) => [
+                      styles.guardianButton,
+                      guardianEscalationId &&
+                        styles.guardianButtonActive,
+                      protectionBusy &&
+                        styles.disabledButton,
+                      pressed &&
+                        !protectionBusy &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Text
+                      style={styles.guardianButtonTitle}
+                    >
+                      {guardianMutating
+                        ? "UPDATING…"
+                        : guardianEscalationId
+                          ? "GUARDIAN ACTIVE"
+                          : "CALL GUARDIAN"}
+                    </Text>
+
+                    <Text
+                      style={styles.guardianButtonBody}
+                    >
+                      {guardianEscalationId
+                        ? "Your private Guardian escalation is active. Tap when the situation is resolved."
+                        : "Escalate privately through the SafeDate™ Guardian response protocol."}
+                    </Text>
+                  </Pressable>
+
+                  {guardianEscalationId ? (
+                    <Text
+                      style={styles.guardianReference}
+                    >
+                      Guardian reference ·{" "}
+                      {guardianEscalationId}
+                    </Text>
+                  ) : null}
+
+                  {guardianError ? (
+                    <Text style={styles.errorText}>
+                      {guardianError}
+                    </Text>
+                  ) : null}
+                </View>
+
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={
@@ -1419,6 +1628,64 @@ export default function SafeDateScreen() {
 }
 
 const styles = StyleSheet.create({
+  guardianSection: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    gap: spacing.sm,
+  },
+  guardianEyebrow: {
+    color: colors.accent,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+  },
+  guardianTitle: {
+    color: colors.textPrimary,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: "800",
+  },
+  guardianBody: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  guardianButton: {
+    minHeight: 82,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+  guardianButtonActive: {
+    borderColor: colors.accent,
+  },
+  guardianButtonTitle: {
+    color: colors.textPrimary,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  guardianButtonBody: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  guardianReference: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    lineHeight: 15,
+  },
   trustedContactSection: {
     marginBottom: spacing.lg,
     padding: spacing.md,
