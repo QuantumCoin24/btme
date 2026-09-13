@@ -17,6 +17,9 @@
           "location"
         ],
         "NSMotionUsageDescription": "Better Than My Ex may use motion data during an active SafeDate to support safety and location-related features when you choose to enable SafeDate protection."
+      },
+      "entitlements": {
+        "aps-environment": "development"
       }
     },
     "android": {

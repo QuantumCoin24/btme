@@ -1,4 +1,9 @@
 import {
+  useEffect,
+  useState,
+} from 'react';
+import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -6,9 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import {
-  useState,
-} from 'react';
 import {
   useRouter,
 } from 'expo-router';
@@ -27,55 +29,101 @@ import {
 
 export default function SafetyCenterScreen() {
   const router = useRouter();
-
-  const {
-    connections,
-  } = useDiscovery();
+  const { connections } = useDiscovery();
 
   const {
     getMemberSafetyState,
-    toggleLocalBlock,
-    saveLocalReportDraft,
+    refreshMemberSafetyState,
+    blockMember,
+    unblockMember,
+    submitReport,
   } = useMemberSafety();
 
   const [
-    draftingConnectionId,
-    setDraftingConnectionId,
+    reportingConnectionId,
+    setReportingConnectionId,
   ] = useState<string | null>(null);
 
-  const [
-    draft,
-    setDraft,
-  ] = useState('');
+  const [report, setReport] =
+    useState('');
 
-  function beginDraft(
+  const [category, setCategory] =
+    useState('other');
+
+  useEffect(() => {
+    for (const connection of connections) {
+      void refreshMemberSafetyState(
+        connection.id,
+      ).catch(() => undefined);
+    }
+  }, [
+    connections,
+    refreshMemberSafetyState,
+  ]);
+
+  async function handleBlock(
     connectionId: string,
+    firstName: string,
   ) {
-    const existing =
-      getMemberSafetyState(
-        connectionId,
-      );
+    const state =
+      getMemberSafetyState(connectionId);
 
-    setDraft(existing.reportDraft);
-    setDraftingConnectionId(connectionId);
+    try {
+      if (state.blockedByMe) {
+        await unblockMember(connectionId);
+        return;
+      }
+
+      await blockMember(connectionId);
+
+      Alert.alert(
+        `${firstName} blocked`,
+        'BTME has applied the block on the server. Messaging between this connection is now unavailable while either member has an active block.',
+      );
+    } catch (error) {
+      Alert.alert(
+        'Safety control unavailable',
+        error instanceof Error
+          ? error.message
+          : 'BTME could not update this block.',
+      );
+    }
   }
 
-  function saveDraft(
+  async function handleSubmitReport(
     connectionId: string,
+    firstName: string,
   ) {
-    saveLocalReportDraft(
-      connectionId,
-      draft,
-    );
+    try {
+      const reportId =
+        await submitReport(
+          connectionId,
+          category,
+          report,
+        );
 
-    setDraftingConnectionId(null);
+      setReport('');
+      setCategory('other');
+      setReportingConnectionId(null);
+
+      Alert.alert(
+        'Report submitted',
+        `Your private BTME safety report about ${firstName} was submitted. Reference: ${reportId}`,
+      );
+    } catch (error) {
+      Alert.alert(
+        'Report not submitted',
+        error instanceof Error
+          ? error.message
+          : 'BTME could not submit this report.',
+      );
+    }
   }
 
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Pressable
@@ -95,30 +143,32 @@ export default function SafetyCenterScreen() {
         </View>
 
         <Text style={styles.eyebrow}>
-          SAFETY CENTER
+          SAFETY CENTRE
         </Text>
 
         <Text style={styles.title}>
-          Your boundaries matter.
+          Your boundaries.
+          {'\n'}
+          Enforced.
         </Text>
 
         <Text style={styles.body}>
-          Blocking and reporting need real
-          server-side enforcement in production.
-          This foundation lets us design the member
-          experience without pretending those
-          systems are active.
+          Block a connection or submit a
+          private safety report. Blocking
+          is enforced by BTME on the server,
+          not only on this device.
         </Text>
 
         {connections.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.cardTitle}>
-              No connections yet.
+              No connections yet
             </Text>
 
             <Text style={styles.cardBody}>
-              Member safety controls will appear
-              here when you have a connection.
+              Safety controls will appear
+              here when you have a
+              connection.
             </Text>
           </View>
         )}
@@ -129,8 +179,8 @@ export default function SafetyCenterScreen() {
               connection.id,
             );
 
-          const drafting =
-            draftingConnectionId ===
+          const reporting =
+            reportingConnectionId ===
             connection.id;
 
           return (
@@ -140,143 +190,269 @@ export default function SafetyCenterScreen() {
             >
               <View style={styles.memberTop}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
+                  <Text
+                    style={styles.avatarText}
+                  >
                     {connection.profile.firstName
-                      .charAt(0)
+                      .slice(0, 1)
                       .toUpperCase()}
                   </Text>
                 </View>
 
                 <View style={styles.memberCopy}>
-                  <Text style={styles.memberName}>
-                    {connection.profile.firstName}
+                  <Text
+                    style={styles.memberName}
+                  >
+                    {
+                      connection.profile
+                        .firstName
+                    }
                   </Text>
 
-                  <Text style={styles.memberMeta}>
-                    {connection.profile.city} ·{' '}
-                    {connection.profile.compatibility}%
+                  <Text
+                    style={styles.memberMeta}
+                  >
+                    {state.loading
+                      ? 'Checking server safety state…'
+                      : 'Connected member'}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.divider} />
 
-              <Text style={styles.controlLabel}>
+              <Text
+                style={styles.controlLabel}
+              >
                 BLOCK
               </Text>
 
-              <Text style={styles.controlBody}>
-                {state.locallyBlocked
-                  ? 'Marked blocked in this local preview only.'
-                  : 'No production block is active.'}
+              <Text
+                style={styles.controlBody}
+              >
+                {state.blockedByMe
+                  ? 'You blocked this member. BTME server enforcement is active.'
+                  : 'You have not blocked this member.'}
               </Text>
 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={
-                  state.locallyBlocked
-                    ? `Remove local preview block for ${connection.profile.firstName}`
-                    : `Mark ${connection.profile.firstName} blocked in local preview`
+                  state.blockedByMe
+                    ? `Unblock ${connection.profile.firstName}`
+                    : `Block ${connection.profile.firstName}`
+                }
+                disabled={
+                  state.loading ||
+                  state.mutating
                 }
                 onPress={() =>
-                  toggleLocalBlock(
+                  void handleBlock(
                     connection.id,
+                    connection.profile
+                      .firstName,
                   )
                 }
-                style={styles.secondaryButton}
+                style={[
+                  styles.secondaryButton,
+                  (state.loading ||
+                    state.mutating) &&
+                    styles.disabledButton,
+                ]}
               >
-                <Text style={styles.secondaryText}>
-                  {state.locallyBlocked
-                    ? 'Undo local block'
-                    : 'Block in preview'}
+                <Text
+                  style={styles.secondaryText}
+                >
+                  {state.mutating
+                    ? 'Updating…'
+                    : state.blockedByMe
+                      ? 'Unblock'
+                      : 'Block member'}
                 </Text>
               </Pressable>
 
               <View style={styles.divider} />
 
-              <Text style={styles.controlLabel}>
+              <Text
+                style={styles.controlLabel}
+              >
                 REPORT
               </Text>
 
-              <Text style={styles.controlBody}>
-                {state.reportDraft
-                  ? 'A private local report draft is saved.'
-                  : 'No report has been submitted.'}
+              <Text
+                style={styles.controlBody}
+              >
+                {state.reportCount > 0
+                  ? `${state.reportCount} private report${state.reportCount === 1 ? '' : 's'} submitted by you.`
+                  : 'No report has been submitted by you.'}
               </Text>
 
-              {!drafting && (
+              {!reporting ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Draft a report about ${connection.profile.firstName}`}
-                  onPress={() =>
-                    beginDraft(
-                      connection.id,
-                    )
+                  accessibilityLabel={`Report ${connection.profile.firstName}`}
+                  disabled={
+                    state.loading ||
+                    state.mutating
                   }
-                  style={styles.secondaryButton}
+                  onPress={() => {
+                    setReport('');
+                    setCategory('other');
+                    setReportingConnectionId(
+                      connection.id,
+                    );
+                  }}
+                  style={
+                    styles.secondaryButton
+                  }
                 >
-                  <Text style={styles.secondaryText}>
-                    {state.reportDraft
-                      ? 'Edit report draft'
-                      : 'Draft a report'}
+                  <Text
+                    style={
+                      styles.secondaryText
+                    }
+                  >
+                    Submit a report
                   </Text>
                 </Pressable>
-              )}
-
-              {drafting && (
+              ) : (
                 <>
                   <TextInput
-                    value={draft}
-                    onChangeText={setDraft}
-                    placeholder="Write a private report draft..."
+                    accessibilityLabel="Report category"
+                    value={category}
+                    onChangeText={setCategory}
+                    placeholder="Category"
+                    placeholderTextColor={
+                      colors.textMuted
+                    }
+                    maxLength={80}
+                    style={styles.categoryInput}
+                  />
+
+                  <TextInput
+                    accessibilityLabel="Private safety report"
+                    value={report}
+                    onChangeText={setReport}
+                    placeholder="Tell BTME what happened..."
                     placeholderTextColor={
                       colors.textMuted
                     }
                     multiline
-                    maxLength={750}
+                    maxLength={4000}
                     style={styles.input}
                   />
 
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="Save report draft locally"
+                    accessibilityLabel="Submit private safety report"
+                    disabled={
+                      state.mutating ||
+                      !report.trim()
+                    }
                     onPress={() =>
-                      saveDraft(
+                      void handleSubmitReport(
                         connection.id,
+                        connection.profile
+                          .firstName,
                       )
                     }
-                    style={styles.primaryButton}
+                    style={[
+                      styles.primaryButton,
+                      (state.mutating ||
+                        !report.trim()) &&
+                        styles.disabledButton,
+                    ]}
                   >
-                    <Text style={styles.primaryText}>
-                      Save draft locally
+                    <Text
+                      style={
+                        styles.primaryText
+                      }
+                    >
+                      {state.mutating
+                        ? 'Submitting…'
+                        : 'Submit report'}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel report"
+                    disabled={
+                      state.mutating
+                    }
+                    onPress={() => {
+                      setReport('');
+                      setCategory('other');
+                      setReportingConnectionId(
+                        null,
+                      );
+                    }}
+                    style={
+                      styles.secondaryButton
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.secondaryText
+                      }
+                    >
+                      Cancel
                     </Text>
                   </Pressable>
                 </>
               )}
+
+              {state.latestReportId ? (
+                <Text
+                  style={
+                    styles.reportReference
+                  }
+                >
+                  Latest report ·{' '}
+                  {state.latestReportId}
+                </Text>
+              ) : null}
+
+              {state.error ? (
+                <Text style={styles.errorText}>
+                  {state.error}
+                </Text>
+              ) : null}
             </View>
           );
         })}
 
         <View style={styles.boundaryCard}>
-          <Text style={styles.boundaryEyebrow}>
-            PRODUCTION BOUNDARY
+          <Text
+            style={styles.boundaryEyebrow}
+          >
+            PRODUCTION SAFETY
           </Text>
 
-          <Text style={styles.boundaryTitle}>
-            No enforcement is running.
+          <Text
+            style={styles.boundaryTitle}
+          >
+            Server-backed enforcement.
           </Text>
 
-          <Text style={styles.boundaryBody}>
-            Preview blocks do not prevent contact
-            or remove profiles. Report drafts are
-            not submitted to moderators, servers,
-            police or emergency services.
+          <Text
+            style={styles.boundaryBody}
+          >
+            Blocks are enforced by BTME
+            server authority and prevent
+            messaging while either member
+            has an active block. Reports
+            are submitted privately to
+            BTME's server records. Reporting
+            does not contact police or
+            emergency services and does not
+            automatically block the member.
           </Text>
         </View>
 
         <Text style={styles.footer}>
-          SAFETY FOUNDATION · LOCAL STATE ONLY · NO
-          REPORT SUBMITTED · NO SERVER BLOCK
+          BTME™ SAFETY · SERVER AUTHORITY ·
+          PRIVATE REPORTING · BLOCK
+          ENFORCEMENT
         </Text>
       </ScrollView>
     </View>
@@ -413,9 +589,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
   },
+  categoryInput: {
+    marginTop: spacing.md,
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.md,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
   input: {
     marginTop: spacing.md,
-    minHeight: 130,
+    minHeight: 140,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -450,6 +637,21 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: colors.textPrimary,
     fontWeight: '800',
+  },
+  disabledButton: {
+    opacity: 0.45,
+  },
+  reportReference: {
+    marginTop: spacing.md,
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 17,
+  },
+  errorText: {
+    marginTop: spacing.md,
+    color: colors.warning,
+    fontSize: 13,
+    lineHeight: 19,
   },
   boundaryCard: {
     marginTop: spacing.xl,

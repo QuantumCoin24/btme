@@ -92,7 +92,7 @@ export default function SettingsScreen() {
         <SettingCard
           eyebrow="SAFETY"
           title="Safety Center"
-          body="Preview block and report controls for your connections."
+          body="Server-backed block and private report controls for your connections."
           action="Open Safety Center"
           onPress={() =>
             router.push(
