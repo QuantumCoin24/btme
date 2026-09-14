@@ -1,0 +1,25 @@
+BTME WEB DEPLOYMENT MODEL
+
+/                         Public marketing landing page
+/how-it-works/             Public
+/safedate/                 Public
+/verification/             Public
+/premium/                  Public
+/safety/                   Public
+/support/                  Public
+/privacy/                  Public
+/terms/                    Public
+/guidelines/               Public
+/account-deletion/         Public
+/contact/                  Public
+
+/app/                      Authenticated BTME web application
+
+SafeDate trusted mutation:
+Native/server authority only.
+
+Live-selfie trusted completion:
+Native/server authority only.
+
+Browser:
+Uses publishable Supabase credentials only.
