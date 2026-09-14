@@ -1009,7 +1009,7 @@ export default function App() {
                   <strong>
                     Identity
                   </strong>
-                  <span>
+                  <span className="status-value status-value-email">
                     {session.user.email ??
                       'Authenticated'}
                   </span>

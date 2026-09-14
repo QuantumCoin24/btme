@@ -206,6 +206,26 @@ input:focus {
   color: rgba(255,255,255,.58);
 }
 
+
+/* ==========================================================
+   BTME WEB — ACCOUNT AUTHORITY VALUE CONTAINMENT
+   ========================================================== */
+
+.status {
+  min-width: 0;
+}
+
+.status-value {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.status-value-email {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 @media (max-width: 640px) {
   .btme-nav {
     padding: 0 22px;

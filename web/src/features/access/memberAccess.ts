@@ -21,7 +21,10 @@ export function describeAccessBlocker(
     return 'Complete your profile'
   }
 
-  if (access.entitlementStatus !== 'active') {
+  if (
+    access.entitlementStatus !== 'active' &&
+    access.entitlementStatus !== 'grace_period'
+  ) {
     return 'Active membership required'
   }
 
