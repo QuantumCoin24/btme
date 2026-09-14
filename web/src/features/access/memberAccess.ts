@@ -10,6 +10,32 @@ export type MemberAccessState = {
   canDate: boolean
 }
 
+export function describeAccessBlocker(
+  access: MemberAccessState | null
+): string {
+  if (!access) {
+    return 'Access status unavailable'
+  }
+
+  if (!access.profileComplete) {
+    return 'Complete your profile'
+  }
+
+  if (access.entitlementStatus !== 'active') {
+    return 'Active membership required'
+  }
+
+  if (access.verificationStatus !== 'verified') {
+    return 'Verification required'
+  }
+
+  if (!access.canDate) {
+    return 'Dating access restricted'
+  }
+
+  return 'Enabled'
+}
+
 export async function getMyDatingAccessState():
   Promise<MemberAccessState | null> {
 

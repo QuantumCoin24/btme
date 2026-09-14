@@ -20,6 +20,7 @@ import {
 } from '../features/auth/auth'
 
 import {
+  describeAccessBlocker,
   getMyDatingAccessState,
   type MemberAccessState
 } from '../features/access/memberAccess'
@@ -1054,7 +1055,7 @@ export default function App() {
                   <span>
                     {access?.canDate
                       ? 'Enabled'
-                      : 'Restricted'}
+                      : describeAccessBlocker(access)}
                   </span>
                 </div>
               </div>
